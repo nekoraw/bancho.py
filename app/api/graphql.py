@@ -13,7 +13,7 @@ from app.constants.gamemodes import GameMode
 
 
 def field_requested(selections: list[Selection], wanted_field: str) -> bool:
-    for selection in selection:
+    for selection in selections:
         # XX: this is probably bad, we could have multiple fields with the same name in different selections
 
         for field in selection.selections:
