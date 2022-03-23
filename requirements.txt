@@ -38,7 +38,7 @@ six==1.16.0
 sniffio==1.2.0
 SQLAlchemy==1.4.32
 starlette==0.17.1
-strawberry-graphql==0.103.8
+strawberry-graphql[fastapi]==0.103.8
 timeago==1.0.15
 typing_extensions==4.1.1
 urllib3==1.26.9
