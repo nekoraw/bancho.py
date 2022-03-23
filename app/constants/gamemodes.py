@@ -36,11 +36,11 @@ GRAPHQL_STR_LIST = (
     "std_rx",
     "taiko_rx",
     "catch_rx",
-    "mania_rx", # unused
+    "mania_rx",  # unused
     "std_ap",
-    "taiko_ap", # unused
-    "catch_ap", # unused
-    "mania_ap", # unused
+    "taiko_ap",  # unused
+    "catch_ap",  # unused
+    "mania_ap",  # unused
 )
 
 
@@ -82,7 +82,7 @@ class GameMode(IntEnum):
             return self.value - 4
         else:
             return self.value
-        
+
     @functools.cached_property
     def graphql_str(self) -> str:
         return GRAPHQL_STR_LIST[self.value]
