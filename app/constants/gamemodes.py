@@ -28,6 +28,21 @@ GAMEMODE_REPR_LIST = (
     "ap!mania",  # unused
 )
 
+GRAPHQL_STR_LIST = (
+    "std",
+    "taiko",
+    "catch",
+    "mania",
+    "std_rx",
+    "taiko_rx",
+    "catch_rx",
+    "mania_rx", # unused
+    "std_ap",
+    "taiko_ap", # unused
+    "catch_ap", # unused
+    "mania_ap", # unused
+)
+
 
 @unique
 @pymysql_encode(escape_enum)
@@ -67,6 +82,10 @@ class GameMode(IntEnum):
             return self.value - 4
         else:
             return self.value
+        
+    @functools.cached_property
+    def graphql_str(self) -> str:
+        return GRAPHQL_STR_LIST[self.value]
 
     def __repr__(self) -> str:
         return GAMEMODE_REPR_LIST[self.value]
