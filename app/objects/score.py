@@ -11,6 +11,7 @@ from typing import Optional
 from typing import TYPE_CHECKING
 
 import app.state
+import app.usecases.players
 import app.utils
 from app.constants.clientflags import ClientFlags
 from app.constants.gamemodes import GameMode
@@ -208,123 +209,6 @@ class Score:
             f"{self.nkatu}|{self.ngeki}|{self.perfect}|{int(self.mods)}|{self.player.id}|{rank}|{timestamp}|"
             "1"  # has replay
         )
-
-    """Classmethods to fetch a score object from various data types."""
-
-    @classmethod
-    async def from_sql(cls, score_id: int) -> Optional[Score]:
-        """Create a score object from sql using it's scoreid."""
-        # XXX: perhaps in the future this should take a gamemode rather
-        # than just the sql table? just faster on the current setup :P
-        row = await app.state.services.database.fetch_one(
-            "SELECT id, map_md5, userid, pp, score, "
-            "max_combo, mods, acc, n300, n100, n50, "
-            "nmiss, ngeki, nkatu, grade, perfect, "
-            "status, mode, play_time, "
-            "time_elapsed, client_flags, online_checksum "
-            "FROM scores WHERE id = :score_id",
-            {"score_id": score_id},
-        )
-
-        if not row:
-            return None
-
-        return await cls.from_row(row)
-
-    @classmethod
-    async def from_row(
-        cls,
-        row: Mapping,
-        calculate_rank: bool = True,
-    ) -> Score:
-        """Create a score object from an sql row."""
-        s = cls()
-
-        s.id = row[0]
-        s.bmap = await Beatmap.from_md5(row[1])
-        s.player = await app.state.sessions.players.from_cache_or_sql(id=row[2])
-
-        s.sr = 0.0  # TODO
-
-        (
-            s.pp,
-            s.score,
-            s.max_combo,
-            s.mods,
-            s.acc,
-            s.n300,
-            s.n100,
-            s.n50,
-            s.nmiss,
-            s.ngeki,
-            s.nkatu,
-            s.grade,
-            s.perfect,
-            s.status,
-            s.mode,
-            s.server_time,
-            s.time_elapsed,
-            s.client_flags,
-            s.client_checksum,
-        ) = row[3:]
-
-        # fix some types
-        s.passed = s.status != 0
-        s.status = SubmissionStatus(s.status)
-        s.grade = Grade.from_str(s.grade)
-        s.mods = Mods(s.mods)
-        s.mode = GameMode(s.mode)
-        s.client_flags = ClientFlags(s.client_flags)
-
-        if s.bmap:
-            s.rank = await s.calculate_placement()
-
-        return s
-
-    @classmethod
-    def from_submission(cls, data: list[str]) -> Score:
-        """Create a score object from an osu! submission string."""
-        s = cls()
-
-        """ parse the following format
-        # 0  online_checksum
-        # 1  n300
-        # 2  n100
-        # 3  n50
-        # 4  ngeki
-        # 5  nkatu
-        # 6  nmiss
-        # 7  score
-        # 8  max_combo
-        # 9  perfect
-        # 10 grade
-        # 11 mods
-        # 12 passed
-        # 13 gamemode
-        # 14 play_time # yyMMddHHmmss
-        # 15 osu_version + (" " * client_flags)
-        """
-
-        s.client_checksum = data[0]
-        s.n300 = int(data[1])
-        s.n100 = int(data[2])
-        s.n50 = int(data[3])
-        s.ngeki = int(data[4])
-        s.nkatu = int(data[5])
-        s.nmiss = int(data[6])
-        s.score = int(data[7])
-        s.max_combo = int(data[8])
-        s.perfect = data[9] == "True"
-        s.grade = Grade.from_str(data[10])
-        s.mods = Mods(int(data[11]))
-        s.passed = data[12] == "True"
-        s.mode = GameMode.from_params(int(data[13]), s.mods)
-        s.client_time = datetime.strptime(data[14], "%y%m%d%H%M%S")
-        s.client_flags = ClientFlags(data[15].count(" ") & ~4)
-
-        s.server_time = datetime.now()
-
-        return s
 
     def compute_online_checksum(
         self,

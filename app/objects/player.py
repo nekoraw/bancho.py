@@ -278,8 +278,13 @@ class Player:
         self.name = name
         self.safe_name = self.make_safe(self.name)
 
-        if "pw_bcrypt" in extras:
-            self.pw_bcrypt: Optional[bytes] = extras["pw_bcrypt"]
+        if pw_bcrypt := extras.get("pw_bcrypt"):
+            if isinstance(pw_bcrypt, str):
+                self.pw_bcrypt = pw_bcrypt.encode()
+            elif isinstance(pw_bcrypt, bytes):
+                self.pw_bcrypt = pw_bcrypt
+            else:
+                raise NotImplementedError
         else:
             self.pw_bcrypt = None
 
