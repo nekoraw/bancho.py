@@ -211,10 +211,6 @@ class Beatmap:
     method available to fetch the beatmap's information, while
     maintaining a low overhead.
 
-    The only methods you should need are:
-      await Beatmap.from_md5(md5: str, set_id: int = -1) -> Optional[Beatmap]
-      await Beatmap.from_bid(bid: int) -> Optional[Beatmap]
-
     Properties:
       Beatmap.full -> str # Artist - Title [Version]
       Beatmap.url -> str # https://osu.cmyui.xyz/beatmaps/321
@@ -360,93 +356,6 @@ class Beatmap:
             "hp": self.hp,
             "diff": self.diff,
         }
-
-    # TODO: implement some locking for the map fetch methods
-
-    """ High level API """
-    # There are three levels of storage used for beatmaps,
-    # the cache (ram), the db (disk), and the osu!api (web).
-    # Going down this list gets exponentially slower, so
-    # we always prioritze what's fastest when possible.
-    # These methods will keep beatmaps reasonably up to
-    # date and use the fastest storage available, while
-    # populating the higher levels of the cache with new maps.
-
-    @classmethod
-    async def from_md5(cls, md5: str, set_id: int = -1) -> Optional[Beatmap]:
-        """Fetch a map from the cache, database, or osuapi by md5."""
-        bmap = await cls._from_md5_cache(md5)
-
-        if not bmap:
-            # map not found in cache
-
-            # to be efficient, we want to cache the whole set
-            # at once rather than caching the individual map
-
-            if set_id <= 0:
-                # set id not provided - fetch it from the map md5
-                res = await app.state.services.database.fetch_one(
-                    "SELECT set_id FROM maps WHERE md5 = :map_md5",
-                    {"map_md5": md5},
-                )
-
-                if res is not None:
-                    # set found in db
-                    set_id = res["set_id"]
-                else:
-                    # set not found in db, try osu!api
-                    api_data = await osuapiv1_getbeatmaps(h=md5)
-
-                    if not api_data:
-                        return None
-
-                    set_id = int(api_data[0]["beatmapset_id"])
-
-            # fetch (and cache) beatmap set
-            beatmap_set = await BeatmapSet.from_bsid(set_id)
-
-            if beatmap_set is not None:
-                # the beatmap set has been cached - fetch beatmap from cache
-                bmap = await cls._from_md5_cache(md5, check_updates=False)
-
-        return bmap
-
-    @classmethod
-    async def from_bid(cls, bid: int) -> Optional[Beatmap]:
-        """Fetch a map from the cache, database, or osuapi by id."""
-        bmap = await cls._from_bid_cache(bid)
-
-        if not bmap:
-            # map not found in cache
-
-            # to be efficient, we want to cache the whole set
-            # at once rather than caching the individual map
-
-            res = await app.state.services.database.fetch_one(
-                "SELECT set_id FROM maps WHERE id = :map_id",
-                {"map_id": bid},
-            )
-
-            if res is not None:
-                # set found in db
-                set_id = res["set_id"]
-            else:
-                # set not found in db, try osu!api
-                api_data = await osuapiv1_getbeatmaps(b=bid)
-
-                if not api_data:
-                    return None
-
-                set_id = int(api_data[0]["beatmapset_id"])
-
-            # fetch (and cache) beatmap set
-            beatmap_set = await BeatmapSet.from_bsid(set_id)
-
-            if beatmap_set is not None:
-                # the beatmap set has been cached - fetch beatmap from cache
-                bmap = await cls._from_bid_cache(bid, check_updates=False)
-
-        return bmap
 
     """ Lower level API """
     # These functions are meant for internal use under

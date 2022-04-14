@@ -15,6 +15,7 @@ import databases.core
 
 import app.settings
 import app.state
+import app.usecases
 import app.utils
 from app.constants.privileges import ClanPrivileges
 from app.constants.privileges import Privileges
@@ -434,7 +435,7 @@ class MapPools(list[MapPool]):
                 created_at=row["created_at"],
                 created_by=created_by,
             )
-            await pool.maps_from_sql(db_conn)
+            await app.usecases.matches.maps_from_sql(pool, db_conn)
             self.append(pool)
 
 

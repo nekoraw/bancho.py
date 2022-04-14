@@ -48,6 +48,7 @@ from starlette.datastructures import UploadFile as StarletteUploadFile
 import app.packets
 import app.settings
 import app.state
+import app.usecases
 import app.utils
 from app.constants import regexes
 from app.constants.clientflags import ClientFlags
@@ -646,7 +647,7 @@ async def osuSubmitModularSelector(
     # fetch map & player
 
     bmap_md5 = score_data[0]
-    if not (bmap := await Beatmap.from_md5(bmap_md5)):
+    if not (bmap := await app.usecases.beatmap.from_md5(bmap_md5)):
         # Map does not exist, most likely unsubmitted.
         return b"error: beatmap"
 
@@ -1362,7 +1363,7 @@ async def getScores(
 
     scoring_metric = "pp" if mode >= GameMode.RELAX_OSU else "score"
 
-    bmap = await Beatmap.from_md5(map_md5, set_id=map_set_id)
+    bmap = await app.usecases.beatmap.from_md5(map_md5, set_id=map_set_id)
     has_set_id = map_set_id > 0
 
     if not bmap:

@@ -10,7 +10,7 @@ from typing import Optional
 from typing import TYPE_CHECKING
 
 import app.state
-import app.usecases.performance
+import app.usecases
 import app.utils
 from app.constants.clientflags import ClientFlags
 from app.constants.gamemodes import GameMode
@@ -219,7 +219,7 @@ class Score:
         s = cls()
 
         s.id = row[0]
-        s.bmap = await Beatmap.from_md5(row[1])
+        s.bmap = await app.usecases.beatmap.from_md5(row[1])
         s.player = await app.state.sessions.players.from_cache_or_sql(id=row[2])
 
         s.sr = 0.0  # TODO

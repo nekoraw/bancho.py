@@ -38,7 +38,7 @@ import app.logging
 import app.packets
 import app.settings
 import app.state
-import app.usecases.performance
+import app.usecases
 import app.utils
 from app.constants import regexes
 from app.constants.gamemodes import GameMode
@@ -312,9 +312,9 @@ async def maplink(ctx: Context) -> Optional[str]:
     spectating = ctx.player.spectating
 
     if match and match.map_id:
-        bmap = await Beatmap.from_md5(match.map_md5)
+        bmap = await app.usecases.beatmap.from_md5(match.map_md5)
     elif spectating and spectating.status.map_id:
-        bmap = await Beatmap.from_md5(spectating.status.map_md5)
+        bmap = await app.usecases.beatmap.from_md5(spectating.status.map_md5)
     elif time.time() < ctx.player.last_np["timeout"]:
         bmap = ctx.player.last_np["bmap"]
 
@@ -648,7 +648,7 @@ async def requests(ctx: Context) -> Optional[str]:
             l.append(f"Failed to find requesting player ({player_id})?")
             continue
 
-        if not (bmap := await Beatmap.from_bid(map_id)):
+        if not (bmap := await app.usecases.beatmap.from_bid(map_id)):
             l.append(f"Failed to find requested map ({map_id})?")
             continue
 
@@ -1720,7 +1720,7 @@ async def mp_map(ctx: Context, match: Match) -> Optional[str]:
     if map_id == match.map_id:
         return "Map already selected."
 
-    if not (bmap := await Beatmap.from_bid(map_id)):
+    if not (bmap := await app.usecases.beatmap.from_bid(map_id)):
         return "Beatmap not found."
 
     match.map_id = bmap.id

@@ -307,7 +307,7 @@ class SendMessage(BasePacket):
                 # the player is /np'ing a map.
                 # save it to their player instance
                 # so we can use this elsewhere owo..
-                bmap = await Beatmap.from_bid(int(r_match["bid"]))
+                bmap = await app.usecases.beatmap.from_bid(int(r_match["bid"]))
 
                 if bmap:
                     # parse mode_vn int from regex
@@ -1093,7 +1093,7 @@ class SendPrivateMessage(BasePacket):
                     # user is /np'ing a map.
                     # save it to their player instance
                     # so we can use this elsewhere owo..
-                    bmap = await Beatmap.from_bid(int(r_match["bid"]))
+                    bmap = await app.usecases.beatmap.from_bid(int(r_match["bid"]))
 
                     if bmap:
                         # parse mode_vn int from regex
@@ -1465,7 +1465,7 @@ class MatchChangeSettings(BasePacket):
 
             # use our serverside version if we have it, but
             # still allow for users to pick unknown maps.
-            bmap = await Beatmap.from_md5(self.new.map_md5)
+            bmap = await app.usecases.beatmap.from_md5(self.new.map_md5)
 
             if bmap:
                 m.map_id = bmap.id
@@ -1596,7 +1596,7 @@ class MatchComplete(BasePacket):
 
         if m.is_scrimming:
             # determine winner, update match points & inform players.
-            asyncio.create_task(m.update_matchpoints(was_playing))
+            asyncio.create_task(app.usecases.matches.update_matchpoints(m, was_playing))
 
 
 @register(ClientPackets.MATCH_CHANGE_MODS)
