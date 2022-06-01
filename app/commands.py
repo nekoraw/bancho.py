@@ -632,7 +632,7 @@ async def get_apikey(ctx: Context) -> Optional[str]:
 
 @command(Privileges.NOMINATOR, aliases=["reqs"], hidden=True)
 async def requests(ctx: Context) -> Optional[str]:
-    """Verifica a vila de nominação de mapas."""
+    """Verifica a fila de nominação de mapas."""
     if ctx.args:
         return "Sintaxe inválida: !requests"
 
