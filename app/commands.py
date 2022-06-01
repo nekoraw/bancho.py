@@ -201,7 +201,7 @@ async def roll(ctx: Context) -> Optional[str]:
         return "Rodar o quê?"
 
     points = random.randrange(0, max_roll)
-    return f"{ctx.player.name} rolls {points} points!"
+    return f"{ctx.player.name} rolou {points} pontos!"
 
 
 @command(Privileges.UNRESTRICTED, hidden=True)
@@ -464,9 +464,9 @@ def parse__with__command_args(
             elif acc is None and arg_stripped.replace(".", "", 1).isdecimal():
                 acc = float(arg_stripped)
                 if not 0 <= acc <= 100:
-                    return ParsingError("Invalid accuracy.")
+                    return ParsingError("Precisão inválida.")
             else:
-                return ParsingError(f"Unknown argument: {arg}")
+                return ParsingError(f"Argumento desconhecido: {arg}")
 
     return {
         "acc": acc,
@@ -560,7 +560,7 @@ async def get_apikey(ctx: Context) -> Optional[str]:
     """Gera uma nova chave API e a designa para o jogador."""
     return "Comando desativado."
     if ctx.recipient is not app.state.sessions.bot:
-        return f"Command only available in DMs with {app.state.sessions.bot.name}."
+        return f"Esse comando só pode ser usado no privado com o {app.state.sessions.bot.name}."
 
     # remove old token
     if ctx.player.api_key:
@@ -574,10 +574,10 @@ async def get_apikey(ctx: Context) -> Optional[str]:
 
     ctx.player.enqueue(
         app.packets.notification(
-            "Type /savelog and click the popup for an easy way to copy this.",
+            "Digite /savelog e clique no pop-up para um jeito fácil de copiar isto.",
         ),
     )
-    return f"Your API key is now: {ctx.player.api_key}"
+    return f"Sua chave da API agora é: {ctx.player.api_key}"
 
 
 """ Nominator commands
@@ -599,7 +599,7 @@ async def requests(ctx: Context) -> Optional[str]:
     if not rows:
         return "A fila está limpa! (0 requisições de mapa)"
 
-    l = [f"Total requests: {len(rows)}"]
+    l = [f"Todas requisições: {len(rows)}"]
 
     for (map_id, player_id, dt) in rows:
         # find player & map for each row, and add to output.
@@ -643,7 +643,7 @@ async def _map(ctx: Context) -> Optional[str]:
 
     if ctx.args[1] == "map":
         if bmap.status == new_status:
-            return f"{bmap.embed} is already {new_status!s}!"
+            return f"{bmap.embed} já está {new_status!s}!"
     else:  # ctx.args[1] == "set"
         if all(map.status == new_status for map in bmap.set.maps):
             return f"All maps from the set are already {new_status!s}!"
@@ -696,11 +696,11 @@ async def _map(ctx: Context) -> Optional[str]:
 """
 
 ACTION_STRINGS = {
-    "restrict": "Restricted for",
-    "unrestrict": "Unrestricted for",
-    "silence": "Silenced for",
-    "unsilence": "Unsilenced for",
-    "note": "Note added:",
+    "restrict": "Restringido por",
+    "unrestrict": "Sem restrições por",
+    "silence": "Silenciado por",
+    "unsilence": "Não silenciado por",
+    "note": "Nota adicionada:",
 }
 
 
@@ -738,7 +738,7 @@ async def notes(ctx: Context) -> Optional[str]:
         if not logger:
             continue
 
-        action_str = ACTION_STRINGS.get(row["action"], "Unknown action:")
+        action_str = ACTION_STRINGS.get(row["action"], "Ação desconhecida:")
         time_str = row["time"]
         note = row["msg"]
 
@@ -755,7 +755,7 @@ async def addnote(ctx: Context) -> Optional[str]:
 
     target = await app.state.sessions.players.from_cache_or_sql(name=ctx.args[0])
     if not target:
-        return f'"{ctx.args[0]}" not found.'
+        return f'"{ctx.args[0]}" não encontrado.'
 
     await app.state.services.database.execute(
         "INSERT INTO logs "
@@ -775,12 +775,12 @@ async def addnote(ctx: Context) -> Optional[str]:
 # some shorthands that can be used as
 # reasons in many moderative commands.
 SHORTHAND_REASONS = {
-    "aa": "having their appeal accepted",
-    "cc": "using a modified osu! client",
-    "3p": "using 3rd party programs",
-    "rx": "using 3rd party programs (relax)",
-    "tw": "using 3rd party programs (timewarp)",
-    "au": "using 3rd party programs (auto play)",
+    "aa": "tendo seu pedido aceitado",
+    "cc": "usando um cliente modificado do osu!",
+    "3p": "usando programas de terceiros",
+    "rx": "usando programas de terceiros (relax)",
+    "tw": "usando programas de terceiros (timewarp)",
+    "au": "usando programas de terceiros (auto play)",
 }
 
 
@@ -795,7 +795,7 @@ async def silence(ctx: Context) -> Optional[str]:
         return f'"{ctx.args[0]}" não encontrado.'
 
     if target.priv & Privileges.STAFF and not ctx.player.priv & Privileges.DEVELOPER:
-        return "Only developers can manage staff members."
+        return "Apenas desenvolvedores podem gerir membros da staff."
 
     duration = timeparse(ctx.args[1])
     if not duration:
@@ -818,18 +818,18 @@ async def unsilence(ctx: Context) -> Optional[str]:
 
     target = await app.state.sessions.players.from_cache_or_sql(name=ctx.args[0])
     if not target:
-        return f'"{ctx.args[0]}" not found.'
+        return f'"{ctx.args[0]}" não encontrado.'
 
     if not target.silenced:
-        return f"{target} is not silenced."
+        return f"{target} não está silenciado."
 
     if target.priv & Privileges.STAFF and not ctx.player.priv & Privileges.DEVELOPER:
-        return "Only developers can manage staff members."
+        return "Apenas desenvolvedores podem gerir membros da staff."
 
     reason = " ".join(ctx.args[1:])
 
     await target.unsilence(ctx.player, reason)
-    return f"{target} was unsilenced."
+    return f"{target} não estava silenciado."
 
 
 """ Admin commands
@@ -872,18 +872,18 @@ async def user(ctx: Context) -> Optional[str]:
 
     return "\n".join(
         (
-            f'[{"Bot" if player.bot_client else "Player"}] {player.full_name} ({player.id})',
-            f"Privileges: {priv_list}",
-            f"Donator: {donator_info}",
-            f"Channels: {[c._name for c in player.channels]}",
-            f"Logged in: {timeago.format(player.login_time)}",
-            f"Last server interaction: {timeago.format(player.last_recv_time)}",
-            f"osu! build: {osu_version} | Tourney: {player.tourney_client}",
-            f"Silenced: {player.silenced} | Spectating: {player.spectating}",
-            f"Last /np: {last_np}",
-            f"Recent score: {player.recent_score}",
-            f"Match: {player.match}",
-            f"Spectators: {player.spectators}",
+            f'[{"Bot" if player.bot_client else "Jogador"}] {player.full_name} ({player.id})',
+            f"Privilégios: {priv_list}",
+            f"Doador: {donator_info}",
+            f"Canais: {[c._name for c in player.channels]}",
+            f"Logado em: {timeago.format(player.login_time)}",
+            f"Ultima interação com o servidor: {timeago.format(player.last_recv_time)}",
+            f"Versão do osu!: {osu_version} | Torneio: {player.tourney_client}",
+            f"Silenciado: {player.silenced} | Espectando: {player.spectating}",
+            f"Ultimo /np: {last_np}",
+            f"Pontuação recente: {player.recent_score}",
+            f"Partida: {player.match}",
+            f"Espectadores: {player.spectators}",
         ),
     )
 
@@ -900,10 +900,10 @@ async def restrict(ctx: Context) -> Optional[str]:
         return f'"{ctx.args[0]}" not found.'
 
     if target.priv & Privileges.STAFF and not ctx.player.priv & Privileges.DEVELOPER:
-        return "Only developers can manage staff members."
+        return "Apenas desenvolvedores podem gerir membros da staff."
 
     if target.restricted:
-        return f"{target} is already restricted!"
+        return f"{target} já está restrito!"
 
     reason = " ".join(ctx.args[1:])
 
@@ -916,7 +916,7 @@ async def restrict(ctx: Context) -> Optional[str]:
     if target.online:
         target.logout()
 
-    return f"{target} was restricted."
+    return f"{target} estava restrito."
 
 
 @command(Privileges.ADMINISTRATOR, hidden=True)
@@ -931,10 +931,10 @@ async def unrestrict(ctx: Context) -> Optional[str]:
         return f'"{ctx.args[0]}" not found.'
 
     if target.priv & Privileges.STAFF and not ctx.player.priv & Privileges.DEVELOPER:
-        return "Only developers can manage staff members."
+        return "Apenas desenvolvedores podem gerir membros da staff."
 
     if not target.restricted:
-        return f"{target} is not restricted!"
+        return f"{target} não está restrito!"
 
     reason = " ".join(ctx.args[1:])
 
@@ -947,7 +947,7 @@ async def unrestrict(ctx: Context) -> Optional[str]:
     if target.online:
         target.logout()
 
-    return f"{target} was unrestricted."
+    return f"{target} não estava restrito."
 
 
 @command(Privileges.ADMINISTRATOR, hidden=True)
@@ -959,7 +959,7 @@ async def alert(ctx: Context) -> Optional[str]:
     notif_txt = " ".join(ctx.args)
 
     app.state.sessions.players.enqueue(app.packets.notification(notif_txt))
-    return "Alert sent."
+    return "Alerta enviado."
 
 
 @command(Privileges.ADMINISTRATOR, aliases=["alertu"], hidden=True)
@@ -970,12 +970,12 @@ async def alertuser(ctx: Context) -> Optional[str]:
 
     target = app.state.sessions.players.get(name=ctx.args[0])
     if not target:
-        return "Could not find a user by that name."
+        return "Não foi possível encontrar um usuário por este nome."
 
     notif_txt = " ".join(ctx.args[1:])
 
     target.enqueue(app.packets.notification(notif_txt))
-    return "Alert sent."
+    return "Alerta enviado."
 
 
 # NOTE: this is pretty useless since it doesn't switch anything other
@@ -990,13 +990,13 @@ async def switchserv(ctx: Context) -> Optional[str]:
     new_bancho_ip = ctx.args[0]
 
     ctx.player.enqueue(app.packets.switch_tournament_server(new_bancho_ip))
-    return "Have a nice journey.."
+    return "Tenha uma boa jornada.."
 
 
 @command(Privileges.ADMINISTRATOR, aliases=["restart"])
 async def shutdown(ctx: Context) -> Union[Optional[str], NoReturn]:
     """Gracefully shutdown the server."""
-    if ctx.trigger == "restart":
+    if ctx.trigger == "reiniciar":
         _signal = signal.SIGUSR1
     else:
         _signal = signal.SIGTERM
@@ -1004,22 +1004,22 @@ async def shutdown(ctx: Context) -> Union[Optional[str], NoReturn]:
     if ctx.args:  # shutdown after a delay
         delay = timeparse(ctx.args[0])
         if not delay:
-            return "Invalid timespan."
+            return "Período de tempo inválido."
 
         if delay < 15:
-            return "Minimum delay is 15 seconds."
+            return "Atraso minímo é 15 segundos."
 
         if len(ctx.args) > 1:
             # alert all online players of the reboot.
             alert_msg = (
-                f"The server will {ctx.trigger} in {ctx.args[0]}.\n\n"
-                f'Reason: {" ".join(ctx.args[1:])}'
+                f"O servidor vai {ctx.trigger} em {ctx.args[0]}.\n\n"
+                f'Rasão: {" ".join(ctx.args[1:])}'
             )
 
             app.state.sessions.players.enqueue(app.packets.notification(alert_msg))
 
         app.state.loop.call_later(delay, os.kill, os.getpid(), _signal)
-        return f"Enqueued {ctx.trigger}."
+        return f"Enfileirado {ctx.trigger}."
     else:  # shutdown immediately
         os.kill(os.getpid(), _signal)
 
@@ -1037,7 +1037,7 @@ async def stealth(ctx: Context) -> Optional[str]:
     # half works; eventually it will be moved to the Admin level.
     ctx.player.stealth = not ctx.player.stealth
 
-    return f'Stealth {"enabled" if ctx.player.stealth else "disabled"}.'
+    return f'Modo furtivo {"ativado" if ctx.player.stealth else "desativado"}.'
 
 
 @command(Privileges.DEVELOPER)
@@ -1053,7 +1053,7 @@ async def recalc(ctx: Context) -> Optional[str]:
 async def debug(ctx: Context) -> Optional[str]:
     """Toggle the console's debug setting."""
     app.settings.DEBUG = not app.settings.DEBUG
-    return f"Toggled {'on' if app.settings.DEBUG else 'off'}."
+    return f"{'Ativado' if app.settings.DEBUG else 'Desativado'}."
 
 
 # NOTE: these commands will likely be removed
@@ -1083,19 +1083,19 @@ async def addpriv(ctx: Context) -> Optional[str]:
 
     for m in [m.lower() for m in ctx.args[1:]]:
         if m not in str_priv_dict:
-            return f"Not found: {m}."
+            return f"Não encontrado: {m}."
 
         bits |= str_priv_dict[m]
 
     target = await app.state.sessions.players.from_cache_or_sql(name=ctx.args[0])
     if not target:
-        return "Could not find user."
+        return "Não foi possível encontrar o usuário."
 
     if bits & Privileges.DONATOR != 0:
-        return "Please use the !givedonator command to assign donator privileges to players."
+        return "Por favor use o comando !givedonator para atribuir os privilégios de doador aos jogadores."
 
     await target.add_privs(bits)
-    return f"Updated {target}'s privileges."
+    return f"Os privilégios de {target} foram atualizados."
 
 
 @command(Privileges.DEVELOPER, hidden=True)
@@ -1108,13 +1108,13 @@ async def rmpriv(ctx: Context) -> Optional[str]:
 
     for m in [m.lower() for m in ctx.args[1:]]:
         if m not in str_priv_dict:
-            return f"Not found: {m}."
+            return f"Não encontrado: {m}."
 
         bits |= str_priv_dict[m]
 
     target = await app.state.sessions.players.from_cache_or_sql(name=ctx.args[0])
     if not target:
-        return "Could not find user."
+        return "Não foi possível encontrar o usuário."
 
     await target.remove_privs(bits)
 
@@ -1125,7 +1125,7 @@ async def rmpriv(ctx: Context) -> Optional[str]:
             {"user_id": target.id},
         )
 
-    return f"Updated {target}'s privileges."
+    return f"Os privilégios de {target} foram atualizados."
 
 
 @command(Privileges.DEVELOPER, hidden=True)
@@ -1136,11 +1136,11 @@ async def givedonator(ctx: Context) -> Optional[str]:
 
     target = await app.state.sessions.players.from_cache_or_sql(name=ctx.args[0])
     if not target:
-        return "Could not find user."
+        return "Não foi possível encontrar o usuário."
 
     timespan = timeparse(ctx.args[1])
     if not timespan:
-        return "Invalid timespan."
+        return "Período de tempo inválido."
 
     if target.donor_end < time.time():
         timespan += int(time.time())
@@ -1175,7 +1175,7 @@ async def wipemap(ctx: Context) -> Optional[str]:
         {"map_md5": map_md5},
     )
 
-    return "Scores wiped."
+    return "Pontuações apagadas."
 
 
 @command(Privileges.DEVELOPER, hidden=True)
@@ -1197,20 +1197,20 @@ async def reload(ctx: Context) -> Optional[str]:
     try:
         mod = __import__(parent)
     except ModuleNotFoundError:
-        return "Module not found."
+        return "Modulo não encontrado."
 
     try:
         for child in children:
             mod = getattr(mod, child)
     except AttributeError:
-        return f"Failed at {child}."  # type: ignore
+        return f"Falhado em {child}."  # type: ignore
 
     try:
         mod = importlib.reload(mod)
     except TypeError as exc:
         return f"{exc.args[0]}."
 
-    return f"Reloaded {mod.__name__}"
+    return f"Recarregado {mod.__name__}"
 
 
 @command(Privileges.UNRESTRICTED)
@@ -1265,13 +1265,13 @@ async def server(ctx: Context) -> Optional[str]:
 
     return "\n".join(
         (
-            f"{build_str} | uptime: {seconds_readable(uptime)}",
+            f"{build_str} | tempo de atividade: {seconds_readable(uptime)}",
             f"cpu(s): {cpus_info}",
-            f"ram: {ram_info}",
+            f"memória: {ram_info}",
             f"mirror: {mirror_url} | osu!api connection: {using_osuapi}",
-            f"advanced mode: {advanced_mode} | auto logging: {auto_logging}",
+            f"modo avançado: {advanced_mode} | login automático: {auto_logging}",
             "",
-            "requirements",
+            "requisitos",
             requirements_info,
         ),
     )
@@ -1405,7 +1405,7 @@ async def mp_start(ctx: Context, match: Match) -> Optional[str]:
         # !mp start
         if match.starting is not None:
             time_remaining = int(match.starting["time"] - time.time())
-            return f"Match starting in {time_remaining} seconds."
+            return f"Partida começando {time_remaining} segundos."
 
         if any([s.status == SlotStatus.not_ready for s in match.slots]):
             return "Not all players are ready (`!mp start force` to override)."
@@ -1414,12 +1414,12 @@ async def mp_start(ctx: Context, match: Match) -> Optional[str]:
             # !mp start N
             if match.starting is not None:
                 time_remaining = int(match.starting["time"] - time.time())
-                return f"Match starting in {time_remaining} seconds."
+                return f"Partida começando {time_remaining} segundos."
 
             # !mp start <seconds>
             duration = int(ctx.args[0])
             if not 0 < duration <= 300:
-                return "Timer range is 1-300 seconds."
+                return "Tempo selecionado deve estar entre 1-300 segundos."
 
             def _start() -> None:
                 """Remove any pending timers & start the match."""
@@ -1429,15 +1429,15 @@ async def mp_start(ctx: Context, match: Match) -> Optional[str]:
                 # make sure player didn't leave the
                 # match since queueing this start lol...
                 if ctx.player not in {slot.player for slot in match.slots}:
-                    match.chat.send_bot("Player left match? (cancelled)")
+                    match.chat.send_bot("Jogador saiu da partida? (cancelled)")
                     return
 
                 match.start()
-                match.chat.send_bot("Starting match.")
+                match.chat.send_bot("Iniciando partida.")
 
             def _alert_start(t: int) -> None:
                 """Alert the match of the impending start."""
-                match.chat.send_bot(f"Match starting in {t} seconds.")
+                match.chat.send_bot(f"Partida começando {t} seconds.")
 
             # add timers to our match object,
             # so we can cancel them if needed.
@@ -1451,11 +1451,11 @@ async def mp_start(ctx: Context, match: Match) -> Optional[str]:
                 "time": time.time() + duration,
             }
 
-            return f"Match will start in {duration} seconds."
+            return f"Partida vai começar em {duration} segundos."
         elif ctx.args[0] in ("cancel", "c"):
             # !mp start cancel
             if match.starting is None:
-                return "Match timer not active!"
+                return "Temporizador da partida não está ativado!"
 
             match.starting["start"].cancel()
             for alert in match.starting["alerts"]:
@@ -1463,13 +1463,13 @@ async def mp_start(ctx: Context, match: Match) -> Optional[str]:
 
             match.starting = None
 
-            return "Match timer cancelled."
+            return "Temporizador cancelado."
         elif ctx.args[0] not in ("force", "f"):
             return "Sintaxe inválida: !mp start <force/seconds>"
         # !mp start force simply passes through
 
     match.start()
-    return "Good luck!"
+    return "Boa sorte!"
 
 
 @mp_commands.add(Privileges.UNRESTRICTED, aliases=["a"])
@@ -1477,14 +1477,14 @@ async def mp_start(ctx: Context, match: Match) -> Optional[str]:
 async def mp_abort(ctx: Context, match: Match) -> Optional[str]:
     """Abort the current in-progress multiplayer match."""
     if not match.in_progress:
-        return "Abort what?"
+        return "Abortar o que?"
 
     match.unready_players(expected=SlotStatus.playing)
 
     match.in_progress = False
     match.enqueue(app.packets.match_abort())
     match.enqueue_state()
-    return "Match aborted."
+    return "Partida abortada."
 
 
 @mp_commands.add(Privileges.UNRESTRICTED)
@@ -1497,11 +1497,11 @@ async def mp_map(ctx: Context, match: Match) -> Optional[str]:
     map_id = int(ctx.args[0])
 
     if map_id == match.map_id:
-        return "Map already selected."
+        return "Mapa já está selecionado."
 
     bmap = await Beatmap.from_bid(map_id)
     if not bmap:
-        return "Beatmap not found."
+        return "O mapa não foi encontrado."
 
     match.map_id = bmap.id
     match.map_md5 = bmap.md5
@@ -1510,7 +1510,7 @@ async def mp_map(ctx: Context, match: Match) -> Optional[str]:
     match.mode = bmap.mode
 
     match.enqueue_state()
-    return f"Selected: {bmap.embed}."
+    return f"Selecionado: {bmap.embed}."
 
 
 @mp_commands.add(Privileges.UNRESTRICTED)
@@ -1538,7 +1538,7 @@ async def mp_mods(ctx: Context, match: Match) -> Optional[str]:
         match.mods = mods
 
     match.enqueue_state()
-    return "Match mods updated."
+    return "Mods da partida atualizados."
 
 
 @mp_commands.add(Privileges.UNRESTRICTED, aliases=["fm", "fmods"])
@@ -1576,7 +1576,7 @@ async def mp_freemods(ctx: Context, match: Match) -> Optional[str]:
                 s.mods = Mods.NOMOD
 
     match.enqueue_state()
-    return "Match freemod status updated."
+    return "Mods livres atualizado."
 
 
 @mp_commands.add(Privileges.UNRESTRICTED)
@@ -1588,19 +1588,19 @@ async def mp_host(ctx: Context, match: Match) -> Optional[str]:
 
     target = app.state.sessions.players.get(name=ctx.args[0])
     if not target:
-        return "Could not find a user by that name."
+        return "Não foi possível encontrar um usuário por este nome."
 
     if target is match.host:
-        return "They're already host, silly!"
+        return "Esta pessoa já está com o anfitrião!"
 
     if target not in {slot.player for slot in match.slots}:
-        return "Found no such player in the match."
+        return "Jogador não foi encontrado na partida."
 
     match.host_id = target.id
 
     match.host.enqueue(app.packets.match_transfer_host())
     match.enqueue_state(lobby=True)
-    return "Match host updated."
+    return "Anfitrião da partida foi atualizado."
 
 
 @mp_commands.add(Privileges.UNRESTRICTED)
@@ -1608,7 +1608,7 @@ async def mp_host(ctx: Context, match: Match) -> Optional[str]:
 async def mp_randpw(ctx: Context, match: Match) -> Optional[str]:
     """Randomize the current match's password."""
     match.passwd = secrets.token_hex(8)
-    return "Match password randomized."
+    return "Senha da partida foi randomizada."
 
 
 @mp_commands.add(Privileges.UNRESTRICTED, aliases=["inv"])
@@ -1620,16 +1620,16 @@ async def mp_invite(ctx: Context, match: Match) -> Optional[str]:
 
     target = app.state.sessions.players.get(name=ctx.args[0])
     if not target:
-        return "Could not find a user by that name."
+        return "Não foi possível encontrar um usuário por este nome."
 
     if target is app.state.sessions.bot:
-        return "I'm too busy!"
+        return "Estou muito ocupado!"
 
     if target is ctx.player:
-        return "You can't invite yourself!"
+        return "Não tem como convidar você mesmo!"
 
     target.enqueue(app.packets.match_invite(ctx.player, target.name))
-    return f"Invited {target} to the match."
+    return f"Convidou {target} para a partida."
 
 
 @mp_commands.add(Privileges.UNRESTRICTED)
@@ -1641,16 +1641,16 @@ async def mp_addref(ctx: Context, match: Match) -> Optional[str]:
 
     target = app.state.sessions.players.get(name=ctx.args[0])
     if not target:
-        return "Could not find a user by that name."
+        return "Não foi possível encontrar um usuário por este nome."
 
     if target not in {slot.player for slot in match.slots}:
-        return "User must be in the current match!"
+        return "Usuário deve estar na partida atual!"
 
     if target in match.refs:
-        return f"{target} is already a match referee!"
+        return f"{target} já é um juíz da partida!"
 
     match._refs.add(target)
-    return f"{target.name} added to match referees."
+    return f"{target.name} adicionado aos juízes da partida."
 
 
 @mp_commands.add(Privileges.UNRESTRICTED)
@@ -1662,16 +1662,16 @@ async def mp_rmref(ctx: Context, match: Match) -> Optional[str]:
 
     target = app.state.sessions.players.get(name=ctx.args[0])
     if not target:
-        return "Could not find a user by that name."
+        return "Não foi possível encontrar um usuário por este nome."
 
     if target not in match.refs:
-        return f"{target} is not a match referee!"
+        return f"{target} não é um juíz da partida!"
 
     if target is match.host:
         return "The host is always a referee!"
 
     match._refs.remove(target)
-    return f"{target.name} removed from match referees."
+    return f"{target.name} não é mais um juíz da partida."
 
 
 @mp_commands.add(Privileges.UNRESTRICTED)
@@ -1723,7 +1723,7 @@ async def mp_teams(ctx: Context, match: Match) -> Optional[str]:
     elif team_type in ("tag-teams", "tag-team-vs", "tag-teams-vs"):
         match.team_type = MatchTeamTypes.tag_team_vs
     else:
-        return "Unknown team type. (ffa, tag, teams, tag-teams)"
+        return "Tipo de time desconhecido. (ffa, tag, teams, tag-teams)"
 
     # find the new appropriate default team.
     # defaults are (ffa: neutral, teams: red).
@@ -1743,7 +1743,7 @@ async def mp_teams(ctx: Context, match: Match) -> Optional[str]:
         match.reset_scrim()
 
     match.enqueue_state()
-    return "Match team type updated."
+    return "Atualizado o tipo de time."
 
 
 @mp_commands.add(Privileges.UNRESTRICTED, aliases=["cond"])
@@ -1760,9 +1760,9 @@ async def mp_condition(ctx: Context, match: Match) -> Optional[str]:
         # win condition, but bancho.py allows it to be passed into
         # this command during a scrims to use pp as a win cond.
         if not match.is_scrimming:
-            return "PP is only useful as a win condition during scrims."
+            return "PP só é usado como uma condição de vitória durante amistosos."
         if match.use_pp_scoring:
-            return "PP scoring already enabled."
+            return "Pontuação por PP já está ativada."
 
         match.use_pp_scoring = True
     else:
@@ -1778,10 +1778,10 @@ async def mp_condition(ctx: Context, match: Match) -> Optional[str]:
         elif cond in ("scorev2", "v2"):
             match.win_condition = MatchWinConditions.scorev2
         else:
-            return "Invalid win condition. (score, acc, combo, scorev2, *pp)"
+            return "Condição de vitória inválida. (score, acc, combo, scorev2, *pp)"
 
     match.enqueue_state(lobby=False)
-    return "Match win condition updated."
+    return "Condição de vitória atualizada."
 
 
 @mp_commands.add(Privileges.UNRESTRICTED, aliases=["autoref"])
@@ -1794,31 +1794,31 @@ async def mp_scrim(ctx: Context, match: Match) -> Optional[str]:
 
     best_of = int(r_match[1])
     if not 0 <= best_of < 16:
-        return "Best of must be in range 0-15."
+        return "Melhor deve estar entre 0-15."
 
     winning_pts = (best_of // 2) + 1
 
     if winning_pts != 0:
         # setting to real num
         if match.is_scrimming:
-            return "Already scrimming!"
+            return "Amistoso já está acontecendo!"
 
         if best_of % 2 == 0:
-            return "Best of must be an odd number!"
+            return "Melhor deve ser um número ímpar!"
 
         match.is_scrimming = True
         msg = (
-            f"A scrimmage has been started by {ctx.player.name}; "
-            f"first to {winning_pts} points wins. Best of luck!"
+            f"Um amistoso foi iniciado por {ctx.player.name}; "
+            f"primeiro a conseguir {winning_pts} pontos, vence. Boa sorte!"
         )
     else:
         # setting to 0
         if not match.is_scrimming:
-            return "Not currently scrimming!"
+            return "Amistoso não está acontecendo!"
 
         match.is_scrimming = False
         match.reset_scrim()
-        msg = "Scrimming cancelled."
+        msg = "Amistoso cancelado."
 
     match.winning_pts = winning_pts
     return msg
@@ -1833,7 +1833,7 @@ async def mp_endscrim(ctx: Context, match: Match) -> Optional[str]:
 
     match.is_scrimming = False
     match.reset_scrim()
-    return "Scrimmage ended."  # TODO: final score (get_score method?)
+    return "Amistoso terminou."  # TODO: final score (get_score method?)
 
 
 @mp_commands.add(Privileges.UNRESTRICTED, aliases=["rm"])
@@ -1844,7 +1844,7 @@ async def mp_rematch(ctx: Context, match: Match) -> Optional[str]:
         return "Sintaxe inválida: !mp rematch"
 
     if ctx.player is not match.host:
-        return "Only available to the host."
+        return "Apenas disponível para o anfitrião."
 
     if not match.is_scrimming:
         if match.winning_pts == 0:
@@ -1883,7 +1883,7 @@ async def mp_force(ctx: Context, match: Match) -> Optional[str]:
 
     target = app.state.sessions.players.get(name=ctx.args[0])
     if not target:
-        return "Could not find a user by that name."
+        return "Não foi possível encontrar um usuário por este nome."
 
     target.join_match(match, match.passwd)
     return "Welcome."
@@ -1900,7 +1900,7 @@ async def mp_loadpool(ctx: Context, match: Match) -> Optional[str]:
         return "Sintaxe inválida: !mp loadpool <name>"
 
     if ctx.player is not match.host:
-        return "Only available to the host."
+        return "Apenas disponível para o anfitrião."
 
     name = ctx.args[0]
 
@@ -1923,7 +1923,7 @@ async def mp_unloadpool(ctx: Context, match: Match) -> Optional[str]:
         return "Sintaxe inválida: !mp unloadpool"
 
     if ctx.player is not match.host:
-        return "Only available to the host."
+        return "Apenas disponível para o anfitrião."
 
     if not match.pool:
         return "No mappool currently selected!"
