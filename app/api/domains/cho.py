@@ -1551,9 +1551,9 @@ class MatchChangeSettings(BasePacket):
                 ]
 
                 msg = (
-                    "Changing team type while scrimming will reset "
-                    "the overall score - to do so, please use the "
-                    f"!mp teams {_team} command."
+                    "Mudar o tipo de time durante o amistoso vai redefinir "
+                    "a pontuação total - para fazer isso, por favor use o comando "
+                    f"!mp teams {_team}."
                 )
                 player.match.chat.send_bot(msg)
             else:
