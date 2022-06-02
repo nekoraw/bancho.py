@@ -118,7 +118,7 @@ async def bot_hello(p: Player) -> None:
 
 
 async def notif_hello(p: Player) -> None:
-    p.enqueue(app.packets.notification(f"hello {p.name}!"))
+    p.enqueue(app.packets.notification(f"olá {p.name}!"))
 
 
 MENU2 = Menu(

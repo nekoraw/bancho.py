@@ -382,10 +382,10 @@ async def lastFM(
             app.packets.notification(
                 "\n".join(
                     [
-                        "Hey!",
-                        "It appears you have hq!osu's multiaccounting tool (relife) enabled.",
-                        "This tool leaves a change in your registry that the osu! client can detect.",
-                        "Please re-install relife and disable the program to avoid any restrictions.",
+                        "Ei!",
+                        "Parece que você tem a ferramenta de multiaccount hq!osu's (relife) habilitada.",
+                        "Essa ferramente deixa uma mudança no seu registro que o client do osu! consegue detectar.",
+                        "Por favor, reinstale relife e desative o programa para evitar quaisquer restrições.",
                     ],
                 ),
             ),
@@ -796,7 +796,7 @@ async def osuSubmitModularSelector(
 
             score.player.enqueue(
                 app.packets.notification(
-                    f"You achieved #{score.rank}! ({performance})",
+                    f"Você alcançou #{score.rank} no mapa! ({performance})",
                 ),
             )
 

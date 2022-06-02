@@ -62,7 +62,7 @@ async def _remove_expired_donation_privileges(interval: int) -> None:
 
             if p.online:
                 p.enqueue(
-                    app.packets.notification("Your supporter status has expired."),
+                    app.packets.notification("O seu supporter acabou."),
                 )
 
             log(f"{p}'s supporter status has expired.", Ansi.LMAGENTA)
