@@ -369,26 +369,26 @@ class StatsUpdateRequest(BasePacket):
 # TODO: these should probably be moved to the config.
 WELCOME_MSG = "\n".join(
     (
-        f"Welcome to {BASE_DOMAIN}.",
-        "To see a list of commands, use !help.",
-        "We have a public (Discord)[https://discord.gg/ShEQgUx]!",
-        "Enjoy the server!",
+        f"Bem-vindo a {BASE_DOMAIN}.",
+        "Para ver a lista de comandos, use !help.",
+        "Nós temos um (Discord)[https://youtu.be/dQw4w9WgXcQ] público!",
+        "Aproveite o servidor!",
     ),
 )
 
 RESTRICTED_MSG = (
-    "Your account is currently in restricted mode. "
-    "If you believe this is a mistake, or have waited a period "
-    "greater than 3 months, you may appeal via the form on the site."
+    "Sua conta está atualmente no modo restrito. "
+    "Caso você ache que isso é um erro, ou esperou um período "
+    "do que 3 meses, você pode se justificar com o formulário no site."
 )
 
 WELCOME_NOTIFICATION = app.packets.notification(
-    f"Welcome back to {BASE_DOMAIN}!\nRunning bancho.py v{app.settings.VERSION}.",
+    f"Bem-vindo ao {BASE_DOMAIN}!\nRodando bancho.py v{app.settings.VERSION}.",
 )
 
 OFFLINE_NOTIFICATION = app.packets.notification(
-    "The server is currently running in offline mode; "
-    "some features will be unavailable.",
+    "O servidor está rodando em modo offline; "
+    "alguns recursos estarão indisponíveis.",
 )
 
 
@@ -1250,7 +1250,7 @@ class MatchCreate(BasePacket):
             player.enqueue(
                 app.packets.match_join_fail()
                 + app.packets.notification(
-                    "Multiplayer is not available while restricted.",
+                    "Multijogador não está disponível enquando restrito.",
                 ),
             )
             return
@@ -1259,7 +1259,7 @@ class MatchCreate(BasePacket):
             player.enqueue(
                 app.packets.match_join_fail()
                 + app.packets.notification(
-                    "Multiplayer is not available while silenced.",
+                    "Multijogador não está disponível enquando silenciado.",
                 ),
             )
             return
@@ -1268,7 +1268,7 @@ class MatchCreate(BasePacket):
 
         if match_id is None:
             # failed to create match (match slots full).
-            player.send_bot("Failed to create match (no slots available).")
+            player.send_bot("Incapaz de criar partida (sem vagas disponíveis).")
             player.enqueue(app.packets.match_join_fail())
             return
 
@@ -1307,7 +1307,7 @@ class MatchCreate(BasePacket):
         player.update_latest_activity_soon()
         player.join_match(match, self.match_data.passwd)
 
-        match.chat.send_bot(f"Match created by {player.name}.")
+        match.chat.send_bot(f"Partida criada por {player.name}.")
         log(f"{player} created a new multiplayer match.")
 
 
@@ -1525,7 +1525,7 @@ class MatchChangeSettings(BasePacket):
                 # new map has been chosen, send to match chat.
                 map_url = f"https://osu.{app.settings.DOMAIN}/beatmapsets/#/{self.match_data.map_id}"
                 map_embed = f"[{map_url} {self.match_data.map_name}]"
-                player.match.chat.send_bot(f"Selected: {map_embed}.")
+                player.match.chat.send_bot(f"Selecionado: {map_embed}.")
 
             # use our serverside version if we have it, but
             # still allow for users to pick unknown maps.
@@ -2045,7 +2045,7 @@ class MatchInvite(BasePacket):
             return
 
         if target is app.state.sessions.bot:
-            player.send_bot("I'm too busy!")
+            player.send_bot("Estou muito ocupado!")
             return
 
         target.enqueue(app.packets.match_invite(player, target.name))
