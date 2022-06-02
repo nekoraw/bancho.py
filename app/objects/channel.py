@@ -108,7 +108,7 @@ class Channel:
         msg_len = len(msg)
 
         if msg_len >= 31979:  # TODO ??????????
-            msg = f"message would have crashed games ({msg_len} chars)"
+            msg = f"Mensagem ia ter crashado alguns jogos. ({msg_len} caracteres)"
 
         self.enqueue(
             app.packets.send_message(
