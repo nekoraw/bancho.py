@@ -275,7 +275,7 @@ class SendMessage(BasePacket):
             msg = f"{msg[:2000]}... (truncated)"
             player.enqueue(
                 app.packets.notification(
-                    "Your message was truncated\n(exceeded 2000 characters).",
+                    "Sua mensagem foi truncada\n(passou de 2000 caracteres).",
                 ),
             )
 
@@ -537,7 +537,7 @@ async def login(
             "osu_token": "empty-adapters",
             "response_body": (
                 app.packets.user_id(-1)
-                + app.packets.notification("Please restart your osu! and try again.")
+                + app.packets.notification("Por favor, reinicie o seu osu! e tente novamente.")
             ),
         }
 
@@ -563,7 +563,7 @@ async def login(
                     "osu_token": "user-ghosted",
                     "response_body": (
                         app.packets.user_id(-1)
-                        + app.packets.notification("User already logged in.")
+                        + app.packets.notification("Usuário já está conectado")
                     ),
                 }
 
@@ -577,7 +577,7 @@ async def login(
         return {
             "osu_token": "unknown-username",
             "response_body": (
-                app.packets.notification(f"{BASE_DOMAIN}: Unknown username")
+                app.packets.notification(f"{BASE_DOMAIN}: Nome de usuário desconhecido.")
                 + app.packets.user_id(-1)
             ),
         }
@@ -606,7 +606,7 @@ async def login(
             return {
                 "osu_token": "incorrect-password",
                 "response_body": (
-                    app.packets.notification(f"{BASE_DOMAIN}: Incorrect password")
+                    app.packets.notification(f"{BASE_DOMAIN}: Senha incorreta")
                     + app.packets.user_id(-1)
                 ),
             }
@@ -615,7 +615,7 @@ async def login(
             return {
                 "osu_token": "incorrect-password",
                 "response_body": (
-                    app.packets.notification(f"{BASE_DOMAIN}: Incorrect password")
+                    app.packets.notification(f"{BASE_DOMAIN}: Senha incorreta")
                     + app.packets.user_id(-1)
                 ),
             }
@@ -692,7 +692,7 @@ async def login(
                     "osu_token": "contact-staff",
                     "response_body": (
                         app.packets.notification(
-                            "Please contact staff directly to create an account.",
+                            "Por favor contate a staff diretamente para criar a sua conta.",
                         )
                         + app.packets.user_id(-1)
                     ),
@@ -1096,10 +1096,10 @@ class SendPrivateMessage(BasePacket):
         # limit message length to 2k chars
         # perhaps this could be dangerous with !py..?
         if len(msg) > 2000:
-            msg = f"{msg[:2000]}... (truncated)"
+            msg = f"{msg[:2000]}... (truncado)"
             player.enqueue(
                 app.packets.notification(
-                    "Your message was truncated\n(exceeded 2000 characters).",
+                    "Sua mensagem foi truncada\n(passou de 2000 caracteres).",
                 ),
             )
 
@@ -1116,8 +1116,8 @@ class SendPrivateMessage(BasePacket):
                 # will receive the mail @ next login.
                 player.enqueue(
                     app.packets.notification(
-                        f"{target.name} is currently offline, but will "
-                        "receive your messsage on their next login.",
+                        f"{target.name} está offline, mas vai receber "
+                        "sua mensagem no próximo login",
                     ),
                 )
 
@@ -1250,7 +1250,7 @@ class MatchCreate(BasePacket):
             player.enqueue(
                 app.packets.match_join_fail()
                 + app.packets.notification(
-                    "Multijogador não está disponível enquando restrito.",
+                    "Multijogador não está disponível enquanto restrito.",
                 ),
             )
             return
@@ -1259,7 +1259,7 @@ class MatchCreate(BasePacket):
             player.enqueue(
                 app.packets.match_join_fail()
                 + app.packets.notification(
-                    "Multijogador não está disponível enquando silenciado.",
+                    "Multijogador não está disponível enquanto silenciado.",
                 ),
             )
             return
@@ -1368,7 +1368,7 @@ class MatchJoin(BasePacket):
             player.enqueue(
                 app.packets.match_join_fail()
                 + app.packets.notification(
-                    "Multiplayer is not available while restricted.",
+                    "Multijogador não está disponível enquanto restrito.",
                 ),
             )
             return
@@ -1377,7 +1377,7 @@ class MatchJoin(BasePacket):
             player.enqueue(
                 app.packets.match_join_fail()
                 + app.packets.notification(
-                    "Multiplayer is not available while silenced.",
+                    "Multijogador não está disponível enquanto silenciado..",
                 ),
             )
             return
