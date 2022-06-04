@@ -655,7 +655,7 @@ async def requests(ctx: Context) -> Optional[str]:
             l.append(f"Falha ao achar o mapa requisitado ({map_id})?")
             continue
 
-        l.append(f"[{p.embed} @ {dt:%b %d %I:%M%p}] {bmap.embed}.")
+        l.append(f"[{p.embed} @ {dt:%d %b %I:%M%p}] {bmap.embed}.")
 
     return "\n".join(l)
 
@@ -1478,7 +1478,7 @@ async def reload(ctx: Context) -> Optional[str]:
 
 @command(Privileges.NORMAL)
 async def server(ctx: Context) -> Optional[str]:
-    """Recuperar informações sobre a perfirmance do servidor"""
+    """Recuperar informações sobre a performance do servidor"""
 
     build_str = f"bancho.py v{app.settings.VERSION} ({app.settings.DOMAIN})"
 
@@ -2642,7 +2642,7 @@ async def clan_info(ctx: Context) -> Optional[str]:
     if not (clan := app.state.sessions.clans.get(tag=" ".join(ctx.args).upper())):
         return "Não foi possível achar um clã por essa tag."
 
-    msg = [f"{clan!r} | Founded {clan.created_at:%b %d, %Y}."]
+    msg = [f"{clan!r} | Fundado em {clan.created_at:%d %b, %Y}."]
 
     # get members privs from sql
     for row in await app.state.services.database.fetch_all(
