@@ -18,6 +18,8 @@ __email__ = "cmyuiosu@gmail.com"
 __discord__ = "cmyui#0425"
 
 import os
+import locale
+locale.setlocale(locale.LC_ALL, 'pt_BR.UTF-8')
 
 # set working directory to the bancho/ directory.
 os.chdir(os.path.dirname(os.path.realpath(__file__)))
