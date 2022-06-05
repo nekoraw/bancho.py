@@ -896,6 +896,8 @@ async def login(
                     | Privileges.DONATOR
                     | Privileges.ALUMNI,
                 )
+            elif p.id >= 3:
+                await p.add_privs(Privileges.SUPPORTER)
 
             data += app.packets.send_message(
                 sender=app.state.sessions.bot.name,
