@@ -1,92 +1,74 @@
 from __future__ import annotations
 
-from typing import Optional
+import os
 
-from databases import DatabaseURL
-from starlette.config import Config
-from starlette.datastructures import CommaSeparatedStrings
-from starlette.datastructures import Secret
+from dotenv import load_dotenv
 
-config = Config(".env")
+load_dotenv()
 
-SERVER_ADDR: str = config("SERVER_ADDR")
-SERVER_PORT: Optional[int] = (
-    int(v) if (v := config("SERVER_PORT", default=None)) else None
-)
 
-DB_DSN: DatabaseURL = config("DB_DSN", cast=DatabaseURL)
-REDIS_DSN: str = config("REDIS_DSN")
+def read_bool(value: str) -> bool:
+    return value.lower() in ("true", "1", "yes")
 
-OSU_API_KEY: Secret = config("OSU_API_KEY", cast=Secret)
 
-DOMAIN: str = config("DOMAIN", default="cmyui.xyz")
-MIRROR_URL: str = config("MIRROR_URL", default="https://api.chimu.moe/v1")
+def read_list(value: str) -> list[str]:
+    return value.split(",") if value else []
 
-COMMAND_PREFIX: str = config("COMMAND_PREFIX", default="!")
 
-SEASONAL_BGS: CommaSeparatedStrings = config(
-    "SEASONAL_BGS",
-    cast=CommaSeparatedStrings,
-    default=CommaSeparatedStrings(
-        [
-            "https://akatsuki.pw/static/flower.png",
-            "https://i.cmyui.xyz/nrMT4V2RR3PR.jpeg",
-        ],
-    ),
-)
+SERVER_ADDR = os.environ["SERVER_ADDR"]
+SERVER_PORT = int(v) if (v := os.getenv("SERVER_PORT", None)) else None
 
-MENU_ICON_URL: str = config(
-    "MENU_ICON_URL",
-    default="https://akatsuki.pw/static/logos/logo_ingame.png",
-)
-MENU_ONCLICK_URL: str = config("MENU_ONCLICK_URL", default="https://akatsuki.pw")
+DB_HOST = os.environ["DB_HOST"]
+DB_PORT = int(os.environ["DB_PORT"])
+DB_USER = os.environ["DB_USER"]
+DB_PASS = os.environ["DB_PASS"]
+DB_NAME = os.environ["DB_NAME"]
+DB_DSN = f"mysql://{DB_USER}:{DB_PASS}@{DB_HOST}:{DB_PORT}/{DB_NAME}"
 
-DATADOG_API_KEY: Secret = config("DATADOG_API_KEY", cast=Secret)
-DATADOG_APP_KEY: Secret = config("DATADOG_APP_KEY", cast=Secret)
+REDIS_HOST = os.environ["REDIS_HOST"]
+REDIS_PORT = int(os.environ["REDIS_PORT"])
+REDIS_USER = os.environ["REDIS_USER"]
+REDIS_PASS = os.environ["REDIS_PASS"]
+REDIS_DB = int(os.environ["REDIS_DB"])
+REDIS_DSN = f"redis://{REDIS_USER}:{REDIS_PASS}@{REDIS_HOST}:{REDIS_PORT}/{REDIS_DB}"
 
-DEBUG: bool = config("DEBUG", cast=bool, default=False)
-REDIRECT_OSU_URLS: bool = config("REDIRECT_OSU_URLS", cast=bool, default=True)
+OSU_API_KEY = os.environ["OSU_API_KEY"]
 
-PP_CACHED_ACCURACIES: list[int] = [
-    int(acc)
-    for acc in config(
-        "PP_CACHED_ACCS",
-        cast=CommaSeparatedStrings,
-    )
-]
-PP_CACHED_SCORES: list[int] = [
-    int(score)
-    for score in config(
-        "PP_CACHED_SCORES",
-        cast=CommaSeparatedStrings,
-    )
-]
+DOMAIN = os.environ["DOMAIN"]
+MIRROR_URL = os.environ["MIRROR_URL"]
 
-DISALLOWED_NAMES: CommaSeparatedStrings = config(
-    "DISALLOWED_NAMES",
-    cast=CommaSeparatedStrings,
-)
-DISALLOWED_PASSWORDS: CommaSeparatedStrings = config(
-    "DISALLOWED_PASSWORDS",
-    cast=CommaSeparatedStrings,
-)
+COMMAND_PREFIX = os.environ["COMMAND_PREFIX"]
 
-DISCORD_AUDIT_LOG_WEBHOOK: str = config("DISCORD_AUDIT_LOG_WEBHOOK")
+SEASONAL_BGS = read_list(os.environ["SEASONAL_BGS"])
 
-AUTOMATICALLY_REPORT_PROBLEMS: bool = config(
-    "AUTOMATICALLY_REPORT_PROBLEMS",
-    cast=bool,
-    default=True,
-)
+MENU_ICON_URL = os.environ["MENU_ICON_URL"]
+MENU_ONCLICK_URL = os.environ["MENU_ONCLICK_URL"]
+
+DATADOG_API_KEY = os.environ["DATADOG_API_KEY"]
+DATADOG_APP_KEY = os.environ["DATADOG_APP_KEY"]
+
+DEBUG = read_bool(os.environ["DEBUG"])
+REDIRECT_OSU_URLS = read_bool(os.environ["REDIRECT_OSU_URLS"])
+
+PP_CACHED_ACCURACIES = [int(acc) for acc in read_list(os.environ["PP_CACHED_ACCS"])]
+PP_CACHED_SCORES = [int(pp) for pp in read_list(os.environ["PP_CACHED_SCORES"])]
+
+DISALLOWED_NAMES = read_list(os.environ["DISALLOWED_NAMES"])
+DISALLOWED_PASSWORDS = read_list(os.environ["DISALLOWED_PASSWORDS"])
+DISALLOW_OLD_CLIENTS = read_bool(os.environ["DISALLOW_OLD_CLIENTS"])
+
+DISCORD_AUDIT_LOG_WEBHOOK = os.environ["DISCORD_AUDIT_LOG_WEBHOOK"]
+
+AUTOMATICALLY_REPORT_PROBLEMS = read_bool(os.environ["AUTOMATICALLY_REPORT_PROBLEMS"])
 
 # advanced dev settings
 
-## WARNING: only touch this once you've
+## WARNING touch this once you've
 ##          read through what it enables.
 ##          you could put your server at risk.
-DEVELOPER_MODE: bool = config("DEVELOPER_MODE", cast=bool, default=False)
+DEVELOPER_MODE = read_bool(os.environ["DEVELOPER_MODE"])
 
-## WARNING: only touch this if you know how
+## WARNING touch this if you know how
 ##          the migrations system works.
 ##          you'll regret it.
-VERSION = "4.3.2"
+VERSION = "4.6.4"

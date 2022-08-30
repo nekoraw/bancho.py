@@ -7,7 +7,7 @@
 bancho.py is an in-progress osu! server implementation for developers of all levels
 of experience interested in hosting their own osu private server instance(s).
 
-the project is developed primarily by the [osu!Akatsuki](https://akatsuki.pw/) team,
+the project is developed primarily by the [Akatsuki](https://akatsuki.pw/) team,
 and our aim is to create the most easily maintainable, reliable, and feature-rich
 osu! server implementation available.
 
@@ -40,6 +40,7 @@ bancho.py is a ~15,000 line codebase built on the shoulder of giants.
 we aim to minimize our dependencies, but still rely on ones such as
 - python (programming language)
 - mysql (relational database)
+- redis (in memory database)
 - nginx (http(s) reverse proxy)
 - certbot (ssl certificate tool)
 - cmake and build-essential (build tools for c/c++)
@@ -49,13 +50,13 @@ as well as some others.
 # python3.9 is often not available natively,
 # but we can rely on deadsnakes to provide it.
 # https://github.com/deadsnakes/python3.9
-sudo add-apt-repository ppa:deadsnakes
+sudo add-apt-repository -y ppa:deadsnakes
 
 # install required programs for running bancho.py
-sudo apt install python3.9-dev python3.9-distutils \
-                 cmake build-essential \
-                 mysql-server redis-server \
-                 nginx certbot
+sudo apt install -y python3.9-dev python3.9-distutils \
+                    cmake build-essential \
+                    mysql-server redis-server \
+                    nginx certbot
 
 # install python's package manager, pip
 # it's used to install python-specific dependencies
@@ -197,7 +198,7 @@ if everything went well, you should be able to start your server up:
 
 and you should see something along the lines of:
 
-![ada](https://i.cmyui.xyz/ld-iZXysVXqwhM8.png)
+![tada](https://cdn.discordapp.com/attachments/616400094408736779/993705619498467369/ld-iZXysVXqwhM8.png)
 
 # Directory Structure
     .

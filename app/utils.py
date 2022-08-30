@@ -45,7 +45,7 @@ __all__ = (
     "pymysql_encode",
     "escape_enum",
     "ensure_supported_platform",
-    "ensure_local_services_are_running",
+    "ensure_connected_services",
     "ensure_directory_structure",
     "ensure_dependencies_and_requirements",
     "setup_runtime_environment",
@@ -88,6 +88,11 @@ async def fetch_bot_name(db_conn: databases.core.Connection) -> str:
 
 def _download_achievement_images_mirror(achievements_path: Path) -> bool:
     """Download all used achievement images (using mirror's zip)."""
+
+    # NOTE: this is currently disabled as there's
+    #       not much benefit to maintaining it
+    return False
+
     log("Downloading achievement images from mirror.", Ansi.LCYAN)
     resp = requests.get("https://cmyui.xyz/achievement_images.zip")
 
@@ -106,15 +111,30 @@ def _download_achievement_images_osu(achievements_path: Path) -> bool:
     """Download all used achievement images (one by one, from osu!)."""
     achs: list[str] = []
 
-    for res in ("", "@2x"):
-        for gm in ("osu", "taiko", "fruits", "mania"):
+    for resolution in ("", "@2x"):
+        for mode in ("osu", "taiko", "fruits", "mania"):
             # only osu!std has 9 & 10 star pass/fc medals.
-            for n in range(1, 1 + (10 if gm == "osu" else 8)):
-                achs.append(f"{gm}-skill-pass-{n}{res}.png")
-                achs.append(f"{gm}-skill-fc-{n}{res}.png")
+            for star_rating in range(1, 1 + (10 if mode == "osu" else 8)):
+                achs.append(f"{mode}-skill-pass-{star_rating}{resolution}.png")
+                achs.append(f"{mode}-skill-fc-{star_rating}{resolution}.png")
 
-        for n in (500, 750, 1000, 2000):
-            achs.append(f"osu-combo-{n}{res}.png")
+        for combo in (500, 750, 1000, 2000):
+            achs.append(f"osu-combo-{combo}{resolution}.png")
+
+        for mod in (
+            "suddendeath",
+            "hidden",
+            "perfect",
+            "hardrock",
+            "doubletime",
+            "flashlight",
+            "easy",
+            "nofail",
+            "nightcore",
+            "halftime",
+            "spunout",
+        ):
+            achs.append(f"all-intro-{mod}{resolution}.png")
 
     log("Downloading achievement images from osu!.", Ansi.LCYAN)
 
@@ -360,31 +380,22 @@ def ensure_supported_platform() -> int:
     return 0
 
 
-def ensure_local_services_are_running() -> int:
-    """Ensure all required services (mysql, redis) are running."""
-    # NOTE: if you have any problems with this, please contact me
-    # @cmyui#0425/cmyuiosu@gmail.com. i'm interested in knowing
-    # how people are using the software so that i can keep it
-    # in mind while developing new features & refactoring.
+def ensure_connected_services(timeout: float = 1.0) -> int:
+    """Ensure connected service connections are functional and running."""
+    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
+        sock.settimeout(timeout)
+        try:
+            sock.connect((app.settings.DB_HOST, app.settings.DB_PORT))
+        except OSError:
+            log("Unable to connect to mysql server.", Ansi.LRED)
+            return 1
 
-    if app.settings.DB_DSN.hostname in ("localhost", "127.0.0.1", None):
-        # sql server running locally, make sure it's running
-        for service in ("mysqld", "mariadb"):
-            if os.path.exists(f"/var/run/{service}/{service}.pid"):
-                break
-        else:
-            # not found, try pgrep
-            pgrep_exit_code = subprocess.call(
-                ["pgrep", "mysqld"],
-                stdout=subprocess.DEVNULL,
-            )
-            if pgrep_exit_code != 0:
-                log("Unable to connect to mysql server.", Ansi.LRED)
-                return 1
-
-    if not os.path.exists("/var/run/redis/redis-server.pid"):
-        log("Unable to connect to redis server.", Ansi.LRED)
-        return 1
+    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
+        try:
+            sock.connect((app.settings.REDIS_HOST, app.settings.REDIS_PORT))
+        except OSError:
+            log("Unable to connect to redis server.", Ansi.LRED)
+            return 1
 
     return 0
 

@@ -24,6 +24,7 @@ from typing import Awaitable
 from typing import Callable
 from typing import Mapping
 from typing import NamedTuple
+from typing import NoReturn
 from typing import Optional
 from typing import Sequence
 from typing import TYPE_CHECKING
@@ -72,7 +73,6 @@ except ModuleNotFoundError:
 if TYPE_CHECKING:
     from app.objects.channel import Channel
 
-R = TypeVar("R")
 
 BEATMAPS_PATH = Path.cwd() / ".data/osu"
 
@@ -98,8 +98,6 @@ class Command(NamedTuple):
 
 
 class CommandSet:
-    __slots__ = ("trigger", "doc", "commands")
-
     def __init__(self, trigger: str, doc: str) -> None:
         self.trigger = trigger
         self.doc = doc
@@ -172,7 +170,7 @@ def command(
 """
 
 
-@command(Privileges.NORMAL, aliases=["", "h"], hidden=True)
+@command(Privileges.UNRESTRICTED, aliases=["", "h"], hidden=True)
 async def _help(ctx: Context) -> Optional[str]:
     """Mostra todos os comandos documentados que um jogador consegue usar."""
     prefix = app.settings.COMMAND_PREFIX
@@ -194,7 +192,7 @@ async def _help(ctx: Context) -> Optional[str]:
     return "\n".join(l)
 
 
-@command(Privileges.NORMAL)
+@command(Privileges.UNRESTRICTED)
 async def roll(ctx: Context) -> Optional[str]:
     """Roda um dado de n lados onde n é o número que você vai dar. (padrão 100)"""
     if ctx.args and ctx.args[0].isdecimal():
@@ -209,7 +207,7 @@ async def roll(ctx: Context) -> Optional[str]:
     return f"{ctx.player.name} rolou {points} pontos!"
 
 
-@command(Privileges.NORMAL, hidden=True)
+@command(Privileges.UNRESTRICTED, hidden=True)
 async def block(ctx: Context) -> Optional[str]:
     """Bloqueia a comunicação de outro usuário com você."""
     target = await app.state.sessions.players.from_cache_or_sql(name=" ".join(ctx.args))
@@ -230,7 +228,7 @@ async def block(ctx: Context) -> Optional[str]:
     return f"Adicionou {target.name} aos usuários bloqueados."
 
 
-@command(Privileges.NORMAL, hidden=True)
+@command(Privileges.UNRESTRICTED, hidden=True)
 async def unblock(ctx: Context) -> Optional[str]:
     """Desbloqueia a comunicação de outro usuário com você."""
     target = await app.state.sessions.players.from_cache_or_sql(name=" ".join(ctx.args))
@@ -248,7 +246,7 @@ async def unblock(ctx: Context) -> Optional[str]:
     return f"Removeu {target.name} dos usuários bloqueados."
 
 
-@command(Privileges.NORMAL)
+@command(Privileges.UNRESTRICTED)
 async def reconnect(ctx: Context) -> Optional[str]:
     """Desconecta e reconecta um jogador (ou si) ao servidor."""
     if ctx.args:
@@ -304,7 +302,7 @@ async def changename(ctx: Context) -> Optional[str]:
     return None
 
 
-@command(Privileges.NORMAL, aliases=["bloodcat", "beatconnect", "chimu", "q"])
+@command(Privileges.UNRESTRICTED, aliases=["bloodcat", "beatconnect", "chimu", "q"])
 async def maplink(ctx: Context) -> Optional[str]:
     """Retorna um link de download para o mapa atual do usuário (depende da situação)."""
     bmap = None
@@ -328,7 +326,7 @@ async def maplink(ctx: Context) -> Optional[str]:
     return f"[https://osu.gatari.pw/d/{bmap.set_id} {bmap.full_name}]"
 
 
-@command(Privileges.NORMAL, aliases=["last", "r"])
+@command(Privileges.UNRESTRICTED, aliases=["last", "r"])
 async def recent(ctx: Context) -> Optional[str]:
     """Mostra informação de uma pontuação recente de um jogador."""
     if ctx.args:
@@ -339,6 +337,9 @@ async def recent(ctx: Context) -> Optional[str]:
 
     if not (s := target.recent_score):
         return "Sem pontuações encontradas :o (somente é salvo por sessão de jogo)"
+        
+    if s.bmap is None:
+        return "Não temos um mapa para sua pontuação recente."
 
     l = [f"[{s.mode!r}] {s.bmap.embed}", f"{s.acc:.2f}%"]
 
@@ -365,12 +366,12 @@ async def recent(ctx: Context) -> Optional[str]:
 
 
 TOP_SCORE_FMTSTR = (
-    "{idx}. ({pp:.2f}pp) [https://osu.{domain}/beatmaps/{bmapid} "
+    "{idx}. ({pp:.2f}pp) [https://osu.{domain}/beatmapsets/{map_set_id}/{map_id} "
     "{artist} - {title} [{version}]]"
 )
 
 
-@command(Privileges.NORMAL, hidden=True)
+@command(Privileges.UNRESTRICTED, hidden=True)
 async def top(ctx: Context) -> Optional[str]:
     """Mostra a informação do top 10 pontuações de um jogador."""
     # !top <mode> (player)
@@ -405,7 +406,7 @@ async def top(ctx: Context) -> Optional[str]:
     mode = GAMEMODE_REPR_LIST.index(ctx.args[0])
 
     scores = await app.state.services.database.fetch_all(
-        "SELECT s.pp, b.artist, b.title, b.version, b.id AS bmapid "
+        "SELECT s.pp, b.artist, b.title, b.version, b.set_id map_set_id, b.id map_id "
         "FROM scores s "
         "LEFT JOIN maps b ON b.md5 = s.map_md5 "
         "WHERE s.userid = :user_id "
@@ -512,7 +513,7 @@ def parse__with__command_args(
         }
 
 
-@command(Privileges.NORMAL, aliases=["w"], hidden=True)
+@command(Privileges.UNRESTRICTED, aliases=["w"], hidden=True)
 async def _with(ctx: Context) -> Optional[str]:
     """Especifica precisão arbitrária e combinação de mods usando o `/np`."""
     if ctx.recipient is not app.state.sessions.bot:
@@ -572,7 +573,7 @@ async def _with(ctx: Context) -> Optional[str]:
     )
 
 
-@command(Privileges.NORMAL, aliases=["req"])
+@command(Privileges.UNRESTRICTED, aliases=["req"])
 async def request(ctx: Context) -> Optional[str]:
     """Requisita um beatmap para nominação."""
     if ctx.args:
@@ -596,7 +597,7 @@ async def request(ctx: Context) -> Optional[str]:
     return "Requisição enviada."
 
 
-@command(Privileges.NORMAL)
+@command(Privileges.UNRESTRICTED)
 async def get_apikey(ctx: Context) -> Optional[str]:
     """Gera uma nova chave API e a designa para o jogador."""
     return "Comando desativado."
@@ -683,8 +684,12 @@ async def _map(ctx: Context) -> Optional[str]:
     bmap = ctx.player.last_np["bmap"]
     new_status = RankedStatus(status_to_id(ctx.args[0]))
 
-    if bmap.status == new_status:
-        return f"{bmap.embed} já está {new_status!s}!"
+    if ctx.args[1] == "map":
+        if bmap.status == new_status:
+            return f"{bmap.embed} já está {new_status!s}!"
+    else:  # ctx.args[1] == "set"
+        if all(map.status == new_status for map in bmap.set.maps):
+            return f"Todos os mapas do conjunto já estão {new_status!s}!"
 
     # update sql & cache based on scope
     # XXX: not sure if getting md5s from sql
@@ -943,6 +948,10 @@ async def restrict(ctx: Context) -> Optional[str]:
 
     await t.restrict(admin=ctx.player, reason=reason)
 
+    # refresh their client state
+    if t.online:
+        t.logout()
+
     return f"{t} foi restrito."
 
 
@@ -969,7 +978,11 @@ async def unrestrict(ctx: Context) -> Optional[str]:
 
     await t.unrestrict(ctx.player, reason)
 
-    return f"{t} não está mais restrito."
+    # refresh their client state
+    if t.online:
+        t.logout()
+
+    return f"{t} não está mais restrito"
 
 
 @command(Privileges.ADMINISTRATOR, hidden=True)
@@ -1015,7 +1028,7 @@ async def switchserv(ctx: Context) -> Optional[str]:
 
 
 @command(Privileges.ADMINISTRATOR, aliases=["restart"])
-async def shutdown(ctx: Context) -> Optional[str]:
+async def shutdown(ctx: Context) -> Union[Optional[str], NoReturn]:
     """Desliga o servidor graciosamente."""
     if ctx.trigger == "reiniciar":
         _signal = signal.SIGUSR1
@@ -1042,7 +1055,6 @@ async def shutdown(ctx: Context) -> Optional[str]:
         return f"Foi enfileirado: {ctx.trigger}."
     else:  # shutdown immediately
         os.kill(os.getpid(), _signal)
-        return ":D"
 
 
 """ Developer commands
@@ -1091,7 +1103,7 @@ async def fakeusers(ctx: Context) -> Optional[str]:
             pm_private=False,
             clan=None,
             clan_priv=None,
-            priv=Privileges.NORMAL | Privileges.VERIFIED,
+            priv=Privileges.UNRESTRICTED | Privileges.VERIFIED,
             silence_end=0,
             login_time=0x7FFFFFFF,  # never auto-dc
         )
@@ -1326,13 +1338,13 @@ async def debug(ctx: Context) -> Optional[str]:
 # NOTE: these commands will likely be removed
 #       with the addition of a good frontend.
 str_priv_dict = {
-    "normal": Privileges.NORMAL,
+    "normal": Privileges.UNRESTRICTED,
     "verified": Privileges.VERIFIED,
     "whitelisted": Privileges.WHITELISTED,
     "supporter": Privileges.SUPPORTER,
     "premium": Privileges.PREMIUM,
     "alumni": Privileges.ALUMNI,
-    "tournament": Privileges.TOURNAMENT,
+    "tournament": Privileges.TOURNEY_MANAGER,
     "nominator": Privileges.NOMINATOR,
     "mod": Privileges.MODERATOR,
     "admin": Privileges.ADMINISTRATOR,
@@ -1476,7 +1488,7 @@ async def reload(ctx: Context) -> Optional[str]:
     return f"Recarregado {mod.__name__}"
 
 
-@command(Privileges.NORMAL)
+@command(Privileges.UNRESTRICTED)
 async def server(ctx: Context) -> Optional[str]:
     """Recuperar informações sobre a performance do servidor"""
 
@@ -1602,6 +1614,8 @@ if app.settings.DEVELOPER_MODE:
 # Most commands are open to player usage.
 """
 
+R = TypeVar("R", bound=Optional[str])
+
 
 def ensure_match(
     f: Callable[[Context, Match], Awaitable[Optional[R]]],
@@ -1621,7 +1635,8 @@ def ensure_match(
             return None
 
         if f is not mp_help and (
-            ctx.player not in match.refs and not ctx.player.priv & Privileges.TOURNAMENT
+            ctx.player not in match.refs
+            and not ctx.player.priv & Privileges.TOURNEY_MANAGER
         ):
             # doesn't have privs to use !mp commands (allow help).
             return None
@@ -1631,7 +1646,7 @@ def ensure_match(
     return wrapper
 
 
-@mp_commands.add(Privileges.NORMAL, aliases=["h"])
+@mp_commands.add(Privileges.UNRESTRICTED, aliases=["h"])
 @ensure_match
 async def mp_help(ctx: Context, match: Match) -> Optional[str]:
     """Mostra todas as salas de multijogador visíeveis que um jogador pode acessar."""
@@ -1648,7 +1663,7 @@ async def mp_help(ctx: Context, match: Match) -> Optional[str]:
     return "\n".join(cmds)
 
 
-@mp_commands.add(Privileges.NORMAL, aliases=["st"])
+@mp_commands.add(Privileges.UNRESTRICTED, aliases=["st"])
 @ensure_match
 async def mp_start(ctx: Context, match: Match) -> Optional[str]:
     """Começa a partida multijogador, com quaisquer jogadores prontos."""
@@ -1734,7 +1749,7 @@ async def mp_start(ctx: Context, match: Match) -> Optional[str]:
     return "Boa sorte!"
 
 
-@mp_commands.add(Privileges.NORMAL, aliases=["a"])
+@mp_commands.add(Privileges.UNRESTRICTED, aliases=["a"])
 @ensure_match
 async def mp_abort(ctx: Context, match: Match) -> Optional[str]:
     """Aborta a partida em progresso no modo multijogador."""
@@ -1749,7 +1764,7 @@ async def mp_abort(ctx: Context, match: Match) -> Optional[str]:
     return "Partida abortada."
 
 
-@mp_commands.add(Privileges.NORMAL)
+@mp_commands.add(Privileges.UNRESTRICTED)
 @ensure_match
 async def mp_map(ctx: Context, match: Match) -> Optional[str]:
     """Define o mapa atual da partida por id."""
@@ -1774,7 +1789,7 @@ async def mp_map(ctx: Context, match: Match) -> Optional[str]:
     return f"Selecionado: {bmap.embed}."
 
 
-@mp_commands.add(Privileges.NORMAL)
+@mp_commands.add(Privileges.UNRESTRICTED)
 @ensure_match
 async def mp_mods(ctx: Context, match: Match) -> Optional[str]:
     """Define os mods atuais da partida, na forma de string."""
@@ -1799,7 +1814,7 @@ async def mp_mods(ctx: Context, match: Match) -> Optional[str]:
     return "Mods da partida atualizados."
 
 
-@mp_commands.add(Privileges.NORMAL, aliases=["fm", "fmods"])
+@mp_commands.add(Privileges.UNRESTRICTED, aliases=["fm", "fmods"])
 @ensure_match
 async def mp_freemods(ctx: Context, match: Match) -> Optional[str]:
     """Alterna o estado dos freemods para a partida."""
@@ -1835,7 +1850,7 @@ async def mp_freemods(ctx: Context, match: Match) -> Optional[str]:
     return "Mods livres atualizado."
 
 
-@mp_commands.add(Privileges.NORMAL)
+@mp_commands.add(Privileges.UNRESTRICTED)
 @ensure_match
 async def mp_host(ctx: Context, match: Match) -> Optional[str]:
     """Define o anfitrião da partida por nome."""
@@ -1858,7 +1873,7 @@ async def mp_host(ctx: Context, match: Match) -> Optional[str]:
     return "Anfitrião da partida foi atualizado."
 
 
-@mp_commands.add(Privileges.NORMAL)
+@mp_commands.add(Privileges.UNRESTRICTED)
 @ensure_match
 async def mp_randpw(ctx: Context, match: Match) -> Optional[str]:
     """Randomiza a senha atual da partida."""
@@ -1866,7 +1881,7 @@ async def mp_randpw(ctx: Context, match: Match) -> Optional[str]:
     return "Senha da partida foi randomizada."
 
 
-@mp_commands.add(Privileges.NORMAL, aliases=["inv"])
+@mp_commands.add(Privileges.UNRESTRICTED, aliases=["inv"])
 @ensure_match
 async def mp_invite(ctx: Context, match: Match) -> Optional[str]:
     """Convida um jogador para a partida pelo nome"""
@@ -1886,7 +1901,7 @@ async def mp_invite(ctx: Context, match: Match) -> Optional[str]:
     return f"Convidou {t} para a partida."
 
 
-@mp_commands.add(Privileges.NORMAL)
+@mp_commands.add(Privileges.UNRESTRICTED)
 @ensure_match
 async def mp_addref(ctx: Context, match: Match) -> Optional[str]:
     """Adiciona um juíz para a partida pelo nome."""
@@ -1906,7 +1921,7 @@ async def mp_addref(ctx: Context, match: Match) -> Optional[str]:
     return f"{t.name} adicionado aos juízes da partida."
 
 
-@mp_commands.add(Privileges.NORMAL)
+@mp_commands.add(Privileges.UNRESTRICTED)
 @ensure_match
 async def mp_rmref(ctx: Context, match: Match) -> Optional[str]:
     """Remove um juíz da partida pelo nome."""
@@ -1926,14 +1941,14 @@ async def mp_rmref(ctx: Context, match: Match) -> Optional[str]:
     return f"{t.name} não é mais um juíz da partida."
 
 
-@mp_commands.add(Privileges.NORMAL)
+@mp_commands.add(Privileges.UNRESTRICTED)
 @ensure_match
 async def mp_listref(ctx: Context, match: Match) -> Optional[str]:
     """Lista todos os juízes da partida"""
     return ", ".join(map(str, match.refs)) + "."
 
 
-@mp_commands.add(Privileges.NORMAL)
+@mp_commands.add(Privileges.UNRESTRICTED)
 @ensure_match
 async def mp_lock(ctx: Context, match: Match) -> Optional[str]:
     """Tranca todas as vagas vazias da partida."""
@@ -1945,7 +1960,7 @@ async def mp_lock(ctx: Context, match: Match) -> Optional[str]:
     return "Todas as vagas vazias foram bloqueadas."
 
 
-@mp_commands.add(Privileges.NORMAL)
+@mp_commands.add(Privileges.UNRESTRICTED)
 @ensure_match
 async def mp_unlock(ctx: Context, match: Match) -> Optional[str]:
     """Destranca todas as vagas trancadas da partida."""
@@ -1957,7 +1972,7 @@ async def mp_unlock(ctx: Context, match: Match) -> Optional[str]:
     return "Todas as vagas trancadas foram destrancadas."
 
 
-@mp_commands.add(Privileges.NORMAL)
+@mp_commands.add(Privileges.UNRESTRICTED)
 @ensure_match
 async def mp_teams(ctx: Context, match: Match) -> Optional[str]:
     """Muda o tipo de time da partida."""
@@ -1998,7 +2013,7 @@ async def mp_teams(ctx: Context, match: Match) -> Optional[str]:
     return "O tipo de time foi atualizado."
 
 
-@mp_commands.add(Privileges.NORMAL, aliases=["cond"])
+@mp_commands.add(Privileges.UNRESTRICTED, aliases=["cond"])
 @ensure_match
 async def mp_condition(ctx: Context, match: Match) -> Optional[str]:
     """Muda a condição de vitória da partida."""
@@ -2036,7 +2051,7 @@ async def mp_condition(ctx: Context, match: Match) -> Optional[str]:
     return "Condição de vitória atualizada."
 
 
-@mp_commands.add(Privileges.NORMAL, aliases=["autoref"])
+@mp_commands.add(Privileges.UNRESTRICTED, aliases=["autoref"])
 @ensure_match
 async def mp_scrim(ctx: Context, match: Match) -> Optional[str]:
     """Começa um amistoso na partida atual."""
@@ -2074,7 +2089,7 @@ async def mp_scrim(ctx: Context, match: Match) -> Optional[str]:
     return msg
 
 
-@mp_commands.add(Privileges.NORMAL, aliases=["end"])
+@mp_commands.add(Privileges.UNRESTRICTED, aliases=["end"])
 @ensure_match
 async def mp_endscrim(ctx: Context, match: Match) -> Optional[str]:
     """Termina o amistoso atual da partida."""
@@ -2086,7 +2101,7 @@ async def mp_endscrim(ctx: Context, match: Match) -> Optional[str]:
     return "Amistoso terminou."  # TODO: final score (get_score method?)
 
 
-@mp_commands.add(Privileges.NORMAL, aliases=["rm"])
+@mp_commands.add(Privileges.UNRESTRICTED, aliases=["rm"])
 @ensure_match
 async def mp_rematch(ctx: Context, match: Match) -> Optional[str]:
     """Reinicia o amistoso, ou desfaz o último ponto da partida."""
@@ -2140,7 +2155,7 @@ async def mp_force(ctx: Context, match: Match) -> Optional[str]:
 # mappool-related mp commands
 
 
-@mp_commands.add(Privileges.NORMAL, aliases=["lp"])
+@mp_commands.add(Privileges.UNRESTRICTED, aliases=["lp"])
 @ensure_match
 async def mp_loadpool(ctx: Context, match: Match) -> Optional[str]:
     """Carrega uma mappool na partida atual."""
@@ -2162,7 +2177,7 @@ async def mp_loadpool(ctx: Context, match: Match) -> Optional[str]:
     return f"{pool!r} selecionada."
 
 
-@mp_commands.add(Privileges.NORMAL, aliases=["ulp"])
+@mp_commands.add(Privileges.UNRESTRICTED, aliases=["ulp"])
 @ensure_match
 async def mp_unloadpool(ctx: Context, match: Match) -> Optional[str]:
     """Descarrega a mappool da partida atual."""
@@ -2179,7 +2194,7 @@ async def mp_unloadpool(ctx: Context, match: Match) -> Optional[str]:
     return "Mappool descarregada."
 
 
-@mp_commands.add(Privileges.NORMAL)
+@mp_commands.add(Privileges.UNRESTRICTED)
 @ensure_match
 async def mp_ban(ctx: Context, match: Match) -> Optional[str]:
     """Bane um mapa da mappool carregada na partida."""
@@ -2209,7 +2224,7 @@ async def mp_ban(ctx: Context, match: Match) -> Optional[str]:
     return f"{mods_slot} banido."
 
 
-@mp_commands.add(Privileges.NORMAL)
+@mp_commands.add(Privileges.UNRESTRICTED)
 @ensure_match
 async def mp_unban(ctx: Context, match: Match) -> Optional[str]:
     """Desbane um mapa da mappool carregada na partida."""
@@ -2239,7 +2254,7 @@ async def mp_unban(ctx: Context, match: Match) -> Optional[str]:
     return f"{mods_slot} desbanido."
 
 
-@mp_commands.add(Privileges.NORMAL)
+@mp_commands.add(Privileges.UNRESTRICTED)
 @ensure_match
 async def mp_pick(ctx: Context, match: Match) -> Optional[str]:
     """Escolhe um mapa da mappool carregada na partida."""
@@ -2296,7 +2311,7 @@ async def mp_pick(ctx: Context, match: Match) -> Optional[str]:
 """
 
 
-@pool_commands.add(Privileges.TOURNAMENT, aliases=["h"], hidden=True)
+@pool_commands.add(Privileges.TOURNEY_MANAGER, aliases=["h"], hidden=True)
 async def pool_help(ctx: Context) -> Optional[str]:
     """Mostra todos os comandos de mappool que um jogador pode usar."""
     prefix = app.settings.COMMAND_PREFIX
@@ -2312,7 +2327,7 @@ async def pool_help(ctx: Context) -> Optional[str]:
     return "\n".join(cmds)
 
 
-@pool_commands.add(Privileges.TOURNAMENT, aliases=["c"], hidden=True)
+@pool_commands.add(Privileges.TOURNEY_MANAGER, aliases=["c"], hidden=True)
 async def pool_create(ctx: Context) -> Optional[str]:
     """Adiciona uma mappool ao banco de dados."""
     if len(ctx.args) != 1:
@@ -2336,6 +2351,7 @@ async def pool_create(ctx: Context) -> Optional[str]:
         "SELECT * FROM tourney_pools WHERE name = :name",
         {"name": name},
     )
+    assert row is not None
 
     row = dict(row)  # make mutable copy
 
@@ -2348,7 +2364,7 @@ async def pool_create(ctx: Context) -> Optional[str]:
     return f"{name} criada."
 
 
-@pool_commands.add(Privileges.TOURNAMENT, aliases=["del", "d"], hidden=True)
+@pool_commands.add(Privileges.TOURNEY_MANAGER, aliases=["del", "d"], hidden=True)
 async def pool_delete(ctx: Context) -> Optional[str]:
     """Remove uma mappool do banco de dados."""
     if len(ctx.args) != 1:
@@ -2376,7 +2392,7 @@ async def pool_delete(ctx: Context) -> Optional[str]:
     return f"{name} deletada."
 
 
-@pool_commands.add(Privileges.TOURNAMENT, aliases=["a"], hidden=True)
+@pool_commands.add(Privileges.TOURNEY_MANAGER, aliases=["a"], hidden=True)
 async def pool_add(ctx: Context) -> Optional[str]:
     """Adiciona um novo mapa para uma mappool no banco de dados"""
     if len(ctx.args) != 2:
@@ -2423,7 +2439,7 @@ async def pool_add(ctx: Context) -> Optional[str]:
     return f"{bmap.embed} adicionado a {name}."
 
 
-@pool_commands.add(Privileges.TOURNAMENT, aliases=["rm", "r"], hidden=True)
+@pool_commands.add(Privileges.TOURNEY_MANAGER, aliases=["rm", "r"], hidden=True)
 async def pool_remove(ctx: Context) -> Optional[str]:
     """Remove um mapa da mappool no banco de dados."""
     if len(ctx.args) != 2:
@@ -2458,7 +2474,7 @@ async def pool_remove(ctx: Context) -> Optional[str]:
     return f"{mods_slot} removido de {name}."
 
 
-@pool_commands.add(Privileges.TOURNAMENT, aliases=["l"], hidden=True)
+@pool_commands.add(Privileges.TOURNEY_MANAGER, aliases=["l"], hidden=True)
 async def pool_list(ctx: Context) -> Optional[str]:
     """Lista a informação de todas as mappools que existem."""
     if not (pools := app.state.sessions.pools):
@@ -2475,7 +2491,7 @@ async def pool_list(ctx: Context) -> Optional[str]:
     return "\n".join(l)
 
 
-@pool_commands.add(Privileges.TOURNAMENT, aliases=["i"], hidden=True)
+@pool_commands.add(Privileges.TOURNEY_MANAGER, aliases=["i"], hidden=True)
 async def pool_info(ctx: Context) -> Optional[str]:
     """Obtêm toda a informação de uma mappool específica."""
     if len(ctx.args) != 1:
@@ -2503,7 +2519,7 @@ async def pool_info(ctx: Context) -> Optional[str]:
 """
 
 
-@clan_commands.add(Privileges.NORMAL, aliases=["h"])
+@clan_commands.add(Privileges.UNRESTRICTED, aliases=["h"])
 async def clan_help(ctx: Context) -> Optional[str]:
     """Mostra todos os comandos documentados de clã que um jogador pode usar."""
     prefix = app.settings.COMMAND_PREFIX
@@ -2519,7 +2535,7 @@ async def clan_help(ctx: Context) -> Optional[str]:
     return "\n".join(cmds)
 
 
-@clan_commands.add(Privileges.NORMAL, aliases=["c"])
+@clan_commands.add(Privileges.UNRESTRICTED, aliases=["c"])
 async def clan_create(ctx: Context) -> Optional[str]:
     """Criar um clã com uma tag e nome dados."""
     if len(ctx.args) < 2:
@@ -2567,9 +2583,6 @@ async def clan_create(ctx: Context) -> Optional[str]:
     clan.owner_id = ctx.player.id
     clan.member_ids.add(ctx.player.id)
 
-    if "full_name" in ctx.player.__dict__:
-        del ctx.player.full_name  # wipe cached_property
-
     await app.state.services.database.execute(
         "UPDATE users "
         "SET clan_id = :clan_id, "
@@ -2586,7 +2599,7 @@ async def clan_create(ctx: Context) -> Optional[str]:
     return f"{clan!r} criado."
 
 
-@clan_commands.add(Privileges.NORMAL, aliases=["delete", "d"])
+@clan_commands.add(Privileges.UNRESTRICTED, aliases=["delete", "d"])
 async def clan_disband(ctx: Context) -> Optional[str]:
     """Desfazer o clã (administradores podem desfazer outros clãs)."""
     if ctx.args:
@@ -2614,8 +2627,6 @@ async def clan_disband(ctx: Context) -> Optional[str]:
         if member := app.state.sessions.players.get(id=member_id):
             member.clan = None
             member.clan_priv = None
-            if "full_name" in member.__dict__:
-                del member.full_name  # wipe cached_property
 
     await app.state.services.database.execute(
         "UPDATE users SET clan_id = 0, clan_priv = 0 WHERE clan_id = :clan_id",
@@ -2633,7 +2644,7 @@ async def clan_disband(ctx: Context) -> Optional[str]:
     return f"{clan!r} desfeito."
 
 
-@clan_commands.add(Privileges.NORMAL, aliases=["i"])
+@clan_commands.add(Privileges.UNRESTRICTED, aliases=["i"])
 async def clan_info(ctx: Context) -> Optional[str]:
     """Obtêm a informação de um clã pela sua tag."""
     if not ctx.args:
@@ -2658,24 +2669,22 @@ async def clan_info(ctx: Context) -> Optional[str]:
     return "\n".join(msg)
 
 
-@clan_commands.add(Privileges.NORMAL)
+@clan_commands.add(Privileges.UNRESTRICTED)
 async def clan_leave(ctx: Context):
     """Sai do clã do qual você faz parte."""
-    p = await app.state.sessions.players.from_cache_or_sql(name=ctx.player.name)
-
-    if not p.clan:
+    if not ctx.player.clan:
         return "Você não está em um clã."
-    elif p.clan_priv == ClanPrivileges.Owner:
+    elif ctx.player.clan_priv == ClanPrivileges.Owner:
         return "Você deve tranferir a liderança do seu clã antes de sair, ou você pode desfazer o clã usando !clan disband."
 
-    await p.clan.remove_member(p)
-    return f"Você saiu do clã {p.clan!r} com sucesso."
+    await ctx.player.clan.remove_member(ctx.player)
+    return f"Você saiu do clã {ctx.player.clan!r} com sucesso."
 
 
 # TODO: !clan inv, !clan join, !clan leave
 
 
-@clan_commands.add(Privileges.NORMAL, aliases=["l"])
+@clan_commands.add(Privileges.UNRESTRICTED, aliases=["l"])
 async def clan_list(ctx: Context) -> Optional[str]:
     """Lista a informação de todos os clãs existentes."""
     if ctx.args:
