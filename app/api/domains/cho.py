@@ -124,7 +124,7 @@ async def bancho_handler(
         # tell their client to reconnect immediately.
         return Response(
             content=(
-                app.packets.notification("Server has restarted.")
+                app.packets.notification("Reconectou-se ao servidor.")
                 + app.packets.restart_server(0)  # ms until reconnection
             ),
         )
@@ -273,7 +273,7 @@ class SendMessage(BasePacket):
             msg = f"{msg[:2000]}... (truncated)"
             p.enqueue(
                 app.packets.notification(
-                    "Your message was truncated\n(exceeded 2000 characters).",
+                    "Sua mensagem foi truncada\n(passou de 2000 caracteres).",
                 ),
             )
 
@@ -362,26 +362,26 @@ class StatsUpdateRequest(BasePacket):
 # TODO: these should probably be moved to the config.
 WELCOME_MSG = "\n".join(
     (
-        f"Welcome to {BASE_DOMAIN}.",
-        "To see a list of commands, use !help.",
-        "We have a public (Discord)[https://discord.gg/ShEQgUx]!",
-        "Enjoy the server!",
+        f"Bem-vindo a {BASE_DOMAIN}.",
+        "Para ver a lista de comandos, use !help.",
+        "Nós temos um (Discord)[https://youtu.be/dQw4w9WgXcQ] público!",
+        "Aproveite o servidor!",
     ),
 )
 
 RESTRICTED_MSG = (
-    "Your account is currently in restricted mode. "
-    "If you believe this is a mistake, or have waited a period "
-    "greater than 3 months, you may appeal via the form on the site."
+    "Sua conta está atualmente no modo restrito. "
+    "Caso você ache que isso é um erro, ou esperou um período "
+    "do que 3 meses, você pode se justificar com o formulário no site."
 )
 
 WELCOME_NOTIFICATION = app.packets.notification(
-    f"Welcome back to {BASE_DOMAIN}!\nRunning bancho.py v{app.settings.VERSION}.",
+    f"Bem-vindo ao {BASE_DOMAIN}!\nRodando bancho.py v{app.settings.VERSION}.",
 )
 
 OFFLINE_NOTIFICATION = app.packets.notification(
-    "The server is currently running in offline mode; "
-    "some features will be unavailable.",
+    "O servidor está rodando em modo offline; "
+    "alguns recursos estarão indisponíveis.",
 )
 
 
@@ -530,7 +530,7 @@ async def login(
             "osu_token": "empty-adapters",
             "response_body": (
                 app.packets.user_id(-1)
-                + app.packets.notification("Please restart your osu! and try again.")
+                + app.packets.notification("Por favor, reinicie o seu osu! e tente novamente.")
             ),
         }
 
@@ -555,7 +555,7 @@ async def login(
                     "osu_token": "user-ghosted",
                     "response_body": (
                         app.packets.user_id(-1)
-                        + app.packets.notification("User already logged in.")
+                        + app.packets.notification("Usuário já está conectado")
                     ),
                 }
 
@@ -571,7 +571,7 @@ async def login(
         return {
             "osu_token": "unknown-username",
             "response_body": (
-                app.packets.notification(f"{BASE_DOMAIN}: Unknown username")
+                app.packets.notification(f"{BASE_DOMAIN}: Nome de usuário desconhecido.")
                 + app.packets.user_id(-1)
             ),
         }
@@ -600,7 +600,7 @@ async def login(
             return {
                 "osu_token": "incorrect-password",
                 "response_body": (
-                    app.packets.notification(f"{BASE_DOMAIN}: Incorrect password")
+                    app.packets.notification(f"{BASE_DOMAIN}: Senha incorreta")
                     + app.packets.user_id(-1)
                 ),
             }
@@ -609,7 +609,7 @@ async def login(
             return {
                 "osu_token": "incorrect-password",
                 "response_body": (
-                    app.packets.notification(f"{BASE_DOMAIN}: Incorrect password")
+                    app.packets.notification(f"{BASE_DOMAIN}: Senha incorreta")
                     + app.packets.user_id(-1)
                 ),
             }
@@ -686,7 +686,7 @@ async def login(
                     "osu_token": "contact-staff",
                     "response_body": (
                         app.packets.notification(
-                            "Please contact staff directly to create an account.",
+                            "Por favor contate a staff diretamente para criar a sua conta.",
                         )
                         + app.packets.user_id(-1)
                     ),
@@ -872,6 +872,8 @@ async def login(
                     | Privileges.DONATOR
                     | Privileges.ALUMNI,
                 )
+            elif p.id >= 3:
+                await p.add_privs(Privileges.SUPPORTER)
 
             data += app.packets.send_message(
                 sender=app.state.sessions.bot.name,
@@ -1063,10 +1065,10 @@ class SendPrivateMessage(BasePacket):
         # limit message length to 2k chars
         # perhaps this could be dangerous with !py..?
         if len(msg) > 2000:
-            msg = f"{msg[:2000]}... (truncated)"
+            msg = f"{msg[:2000]}... (truncado)"
             p.enqueue(
                 app.packets.notification(
-                    "Your message was truncated\n(exceeded 2000 characters).",
+                    "Sua mensagem foi truncada\n(passou de 2000 caracteres).",
                 ),
             )
 
@@ -1083,8 +1085,8 @@ class SendPrivateMessage(BasePacket):
                 # will receive the mail @ next login.
                 p.enqueue(
                     app.packets.notification(
-                        f"{t.name} is currently offline, but will "
-                        "receive your messsage on their next login.",
+                        f"{t.name} está offline, mas vai receber "
+                        "sua mensagem no próximo login",
                     ),
                 )
 
@@ -1229,7 +1231,7 @@ class MatchCreate(BasePacket):
             p.enqueue(
                 app.packets.match_join_fail()
                 + app.packets.notification(
-                    "Multiplayer is not available while restricted.",
+                    "Multijogador não está disponível enquanto restrito.",
                 ),
             )
             return
@@ -1238,14 +1240,14 @@ class MatchCreate(BasePacket):
             p.enqueue(
                 app.packets.match_join_fail()
                 + app.packets.notification(
-                    "Multiplayer is not available while silenced.",
+                    "Multijogador não está disponível enquanto silenciado.",
                 ),
             )
             return
 
         if not app.state.sessions.matches.append(self.match):
             # failed to create match (match slots full).
-            p.send_bot("Failed to create match (no slots available).")
+            p.send_bot("Incapaz de criar partida (sem vagas disponíveis).")
             p.enqueue(app.packets.match_join_fail())
             return
 
@@ -1265,7 +1267,7 @@ class MatchCreate(BasePacket):
         p.update_latest_activity_soon()
         p.join_match(self.match, self.match.passwd)
 
-        self.match.chat.send_bot(f"Match created by {p.name}.")
+        self.match.chat.send_bot(f"Partida criada por {p.name}.")
         log(f"{p} created a new multiplayer match.")
 
 
@@ -1325,7 +1327,7 @@ class MatchJoin(BasePacket):
             p.enqueue(
                 app.packets.match_join_fail()
                 + app.packets.notification(
-                    "Multiplayer is not available while restricted.",
+                    "Multijogador não está disponível enquanto restrito.",
                 ),
             )
             return
@@ -1334,7 +1336,7 @@ class MatchJoin(BasePacket):
             p.enqueue(
                 app.packets.match_join_fail()
                 + app.packets.notification(
-                    "Multiplayer is not available while silenced.",
+                    "Multijogador não está disponível enquanto silenciado..",
                 ),
             )
             return
@@ -1480,7 +1482,7 @@ class MatchChangeSettings(BasePacket):
         elif m.map_id == -1:
             if m.prev_map_id != self.new.map_id:
                 # new map has been chosen, send to match chat.
-                m.chat.send_bot(f"Selected: {self.new.map_embed}.")
+                m.chat.send_bot(f"Selecionado: {self.new.map_embed}.")
 
             # use our serverside version if we have it, but
             # still allow for users to pick unknown maps.
@@ -1506,9 +1508,9 @@ class MatchChangeSettings(BasePacket):
                 ]
 
                 msg = (
-                    "Changing team type while scrimming will reset "
-                    "the overall score - to do so, please use the "
-                    f"!mp teams {_team} command."
+                    "Mudar o tipo de time durante o amistoso vai redefinir "
+                    "a pontuação total - para fazer isso, por favor use o comando "
+                    f"!mp teams {_team}."
                 )
                 m.chat.send_bot(msg)
             else:
@@ -1983,7 +1985,7 @@ class MatchInvite(BasePacket):
             return
 
         if t is app.state.sessions.bot:
-            p.send_bot("I'm too busy!")
+            p.send_bot("Estou muito ocupado!")
             return
 
         t.enqueue(app.packets.match_invite(p, t.name))
