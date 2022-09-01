@@ -271,11 +271,11 @@ class Players(list[Player]):
 
         # country from acronym to {acronym, numeric}
         player["geoloc"] = {
-            "latitude": 0.0,  # TODO
-            "longitude": 0.0,
+            "latitude": -10.8818447,  # TODO
+            "longitude": -51.6441138,
             "country": {
-                "acronym": player["country"],
-                "numeric": app.state.services.country_codes[player["country"]],
+                "acronym": "br",
+                "numeric": 31,
             },
         }
 
