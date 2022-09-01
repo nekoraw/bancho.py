@@ -717,11 +717,11 @@ async def login(
         #     user_info["geoloc"] = await app.state.services.fetch_geoloc_web(ip)
         
         user_info["geoloc"] = {
-            "latitude": 0.0,
-            "longitude": 0.0,
+            "latitude": -10.8818447,
+            "longitude": -51.6441138,
             "country": {
-                "acronym": db_country,
-                "numeric": app.state.services.country_codes[db_country],
+                "acronym": "br",
+                "numeric": 31,
             },
         }
 
