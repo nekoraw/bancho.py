@@ -706,24 +706,15 @@ async def login(
     db_country = user_info.get("country")
 
     if not ip.is_private:
-        # if app.state.services.geoloc_db is not None:
-        #     # good, dev has downloaded a geoloc db from maxmind,
-        #     # so we can do a local db lookup. (typically ~1-5ms)
-        #     # https://www.maxmind.com/en/home
-        #     user_info["geoloc"] = app.state.services.fetch_geoloc_db(ip)
-        # else:
-        #     # bad, we must do an external db lookup using
-        #     # a public api. (depends, `ping ip-api.com`)
-        #     user_info["geoloc"] = await app.state.services.fetch_geoloc_web(ip)
-        
-        user_info["geoloc"] = {
-            "latitude": -10.8818447,
-            "longitude": -51.6441138,
-            "country": {
-                "acronym": "br",
-                "numeric": 31,
-            },
-        }
+        if app.state.services.geoloc_db is not None:
+            # good, dev has downloaded a geoloc db from maxmind,
+            # so we can do a local db lookup. (typically ~1-5ms)
+            # https://www.maxmind.com/en/home
+            user_info["geoloc"] = app.state.services.fetch_geoloc_db(ip)
+        else:
+            # bad, we must do an external db lookup using
+            # a public api. (depends, `ping ip-api.com`)
+            user_info["geoloc"] = await app.state.services.fetch_geoloc_web(ip)
 
         if db_country == "xx":
             # bugfix for old bancho.py versions when
