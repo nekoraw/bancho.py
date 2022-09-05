@@ -1234,7 +1234,7 @@ async def recalc(ctx: Context) -> Optional[str]:
         ):
 
             # ezpp.set_mode(0)  # TODO: other modes
-            calculator = Calculator(osu_file_path)
+            calculator = Calculator(str(osu_file_path))
             for mode in (0, 4, 8):  # vn!std, rx!std, ap!std
                 # TODO: this should be using an async generator
                 for row in await score_select_conn.fetch_all(
@@ -1243,7 +1243,7 @@ async def recalc(ctx: Context) -> Optional[str]:
                     "WHERE map_md5 = :map_md5 AND mode = :mode",
                     {"map_md5": bmap.md5, "mode": mode},
                 ):
-                    params = ScoreParams(mods = row["mods"], acc = row["acc"], nMisses = row["nmiss"], combo = row["combo"])
+                    params = ScoreParams(mods = row["mods"], acc = row["acc"], nMisses = row["nmiss"], combo = row["max_combo"])
 
                     [result] = calculator.calculate(params)
 
@@ -1290,7 +1290,7 @@ async def recalc(ctx: Context) -> Optional[str]:
                     
 
                     # ezpp.set_mode(0)  # TODO: other modes
-                    calculator = Calculator(osu_file_path)
+                    calculator = Calculator(str(osu_file_path))
                     for mode in (0, 4, 8):  # vn!std, rx!std, ap!std
                         # TODO: this should be using an async generator
                         for row in await score_select_conn.fetch_all(
@@ -1300,7 +1300,7 @@ async def recalc(ctx: Context) -> Optional[str]:
                             {"map_md5": bmap_md5, "mode": mode},
                         ):
 
-                            params = ScoreParams(mods = row["mods"], acc = row["acc"], nMisses = row["nmiss"], combo = row["combo"])
+                            params = ScoreParams(mods = row["mods"], acc = row["acc"], nMisses = row["nmiss"], combo = row["max_combo"])
 
                             [result] = calculator.calculate(params)
 
