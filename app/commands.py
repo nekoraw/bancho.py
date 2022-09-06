@@ -954,7 +954,7 @@ async def restrict(ctx: Context) -> Optional[str]:
         
     key_owner = await app.state.services.database.fetch_one(
         "SELECT user_id_created"
-        f"FROM users WHERE user_id_created = {t.id}"
+        f"FROM register_keys WHERE user_id_created = {t.id};"
     )
     u = await app.state.sessions.players.from_cache_or_sql(id=key_owner)
     
