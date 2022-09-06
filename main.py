@@ -116,6 +116,7 @@ def main(argv: Sequence[str]) -> int:
             % app.settings.SERVER_ADDR,
         ) from None
 
+    log("If this is your first time running this fork, register your account on the guweb website with the following key -> 7ee7ba5e-05ab-456a-b500-c9127a5faa42", Ansi.LYELLOW)
     # run the server indefinitely
     uvicorn.run(
         "app.api.init_api:asgi_app",

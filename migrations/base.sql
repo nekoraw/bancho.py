@@ -300,6 +300,7 @@ create table users
 	creation_time int default 0 not null,
 	latest_activity int default 0 not null,
 	clan_id int default 0 not null,
+	n_available_keys int default 0 not null,
 	clan_priv tinyint(1) default 0 not null,
 	preferred_mode int default 0 not null,
 	play_style int default 0 not null,
@@ -317,9 +318,20 @@ create table users
 		unique (safe_name)
 );
 
+create table register_keys
+(
+	reg_key char(36) not null,
+	user_id int not null,
+	creation_time int default 0 not null,
+	foreign key (user_id) references users(id),
+	primary key(reg_key)
+);
+
 insert into users (id, name, safe_name, priv, country, silence_end, email, pw_bcrypt, creation_time, latest_activity)
 values (1, 'BanchoBot', 'banchobot', 1, 'ca', 0, 'bot@akatsuki.pw',
         '_______________________my_cool_bcrypt_______________________', UNIX_TIMESTAMP(), UNIX_TIMESTAMP());
+
+insert into register_keys(reg_key, user_id, creation_time) values ("7ee7ba5e-05ab-456a-b500-c9127a5faa42", 1, UNIX_TIMESTAMP());
 
 INSERT INTO stats (id, mode) VALUES (1, 0); # vn!std
 INSERT INTO stats (id, mode) VALUES (1, 1); # vn!taiko
