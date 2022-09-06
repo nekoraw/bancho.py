@@ -940,6 +940,9 @@ async def restrict(ctx: Context) -> Optional[str]:
 
     if t.restricted:
         return f"{t} já está restrito!"
+    
+    if t.id == 1:
+        return f"Você não pode banir o fubicabot."
 
     reason = " ".join(ctx.args[1:])
 
@@ -959,7 +962,7 @@ async def restrict(ctx: Context) -> Optional[str]:
     if not (u := await app.state.sessions.players.from_cache_or_sql(id=dict(key_owner).get("user_id_created"))):
         return f"{t} foi restrito."        
     
-    if u.restricted:
+    if u.restricted or u.id == 1:
         return f"{t} foi restrito."
     
     reason = f"Banido devido a {t}: {reason}, um jogador convidado ser banido."
