@@ -364,7 +364,7 @@ WELCOME_MSG = "\n".join(
     (
         f"Bem-vindo a {BASE_DOMAIN}.",
         "Para ver a lista de comandos, use !help.",
-        "Nós temos um (Discord)[https://youtu.be/dQw4w9WgXcQ] público!",
+        "Nós temos um (Discord)[https://discord.gg/832zD9FfYH] público!",
         "Aproveite o servidor!",
     ),
 )
@@ -706,24 +706,15 @@ async def login(
     db_country = user_info.get("country")
 
     if not ip.is_private:
-        # if app.state.services.geoloc_db is not None:
-        #     # good, dev has downloaded a geoloc db from maxmind,
-        #     # so we can do a local db lookup. (typically ~1-5ms)
-        #     # https://www.maxmind.com/en/home
-        #     user_info["geoloc"] = app.state.services.fetch_geoloc_db(ip)
-        # else:
-        #     # bad, we must do an external db lookup using
-        #     # a public api. (depends, `ping ip-api.com`)
-        #     user_info["geoloc"] = await app.state.services.fetch_geoloc_web(ip)
-        
-        user_info["geoloc"] = {
-            "latitude": 0.0,
-            "longitude": 0.0,
-            "country": {
-                "acronym": db_country,
-                "numeric": app.state.services.country_codes[db_country],
-            },
-        }
+        if app.state.services.geoloc_db is not None:
+            # good, dev has downloaded a geoloc db from maxmind,
+            # so we can do a local db lookup. (typically ~1-5ms)
+            # https://www.maxmind.com/en/home
+            user_info["geoloc"] = app.state.services.fetch_geoloc_db(ip)
+        else:
+            # bad, we must do an external db lookup using
+            # a public api. (depends, `ping ip-api.com`)
+            user_info["geoloc"] = await app.state.services.fetch_geoloc_web(ip)
 
         if db_country == "xx":
             # bugfix for old bancho.py versions when
