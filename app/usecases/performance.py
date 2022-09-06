@@ -12,6 +12,7 @@ except ModuleNotFoundError:
 from peace_performance_python.objects import Beatmap as PeaceMap
 from peace_performance_python.objects import Calculator as PeaceCalculator
 
+from rosu_pp_py import Calculator, ScoreParams
 
 class DifficultyRating(TypedDict):
     performance: float
@@ -34,42 +35,31 @@ def calculate_performances_std(
     osu_file_path: str,
     scores: list[StdTaikoCatchScore],
 ) -> list[DifficultyRating]:
-    with OppaiWrapper() as calculator:
-        calculator.set_mode(0)
+    results: list[DifficultyRating] = []
 
-        results: list[DifficultyRating] = []
+    
+    calculator = Calculator(osu_file_path)
 
-        for score in scores:
-            if score["mods"] is not None:
-                calculator.set_mods(score["mods"])
+    for score in scores:
+        params = ScoreParams(mods = score["mods"], acc = score["acc"], nMisses = score["nmiss"], combo = score["combo"])
 
-            if score["nmiss"] is not None:
-                calculator.set_nmiss(score["nmiss"])
+        [result] = calculator.calculate(params)
 
-            if score["combo"] is not None:
-                calculator.set_combo(score["combo"])
+        pp = result.pp
+        sr = result.stars
 
-            if score["acc"] is not None:
-                calculator.set_accuracy_percent(score["acc"])
+        if math.isnan(pp) or math.isinf(pp):
+            pp = 0.0
+            sr = 0.0
+        else:
+            pp = round(pp, 5)
 
-            calculator.calculate(osu_file_path)
-
-            pp = calculator.get_pp()
-            sr = calculator.get_sr()
-
-            if math.isnan(pp) or math.isinf(pp):
-                # TODO: report to logserver
-                pp = 0.0
-                sr = 0.0
-            else:
-                pp = round(pp, 5)
-
-            results.append(
-                {
-                    "performance": pp,
-                    "star_rating": sr,
-                },
-            )
+        results.append(
+            {
+                "performance": pp,
+                "star_rating": sr,
+            },
+        )
 
     return results
 
