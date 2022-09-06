@@ -927,7 +927,7 @@ async def user(ctx: Context) -> Optional[str]:
 
 @command(Privileges.ADMINISTRATOR, hidden=True)
 async def restrict(ctx: Context) -> Optional[str]:
-    """Restringe a conta de um jogador especificado, com um motivo."""
+    """Restringe a conta de um jogador especificado, e quem o convidou, com um motivo."""
     if len(ctx.args) < 2:
         return "Sintaxe inválida: !restrict <nome> <motivo>"
 
@@ -957,9 +957,14 @@ async def restrict(ctx: Context) -> Optional[str]:
     )
     u = await app.state.sessions.players.from_cache_or_sql(id=dict(key_owner).get("user_id_created"))
     
-    print(key_owner, u)
+    if not u.restricted:
+        return f"{t} foi restrito."
+    
+    reason = f"Banido devido a {t}: {reason}, um jogador convidado ser banido."
+    await u.restrict(admin=ctx.player, reason=reason)
+        
+    return f"{t} foi restrito, e {u} também foi por ter convidado."
 
-    return f"{t} foi restrito."
 
 
 @command(Privileges.ADMINISTRATOR, hidden=True)

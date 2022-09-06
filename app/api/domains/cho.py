@@ -686,7 +686,7 @@ async def login(
                     "osu_token": "contact-staff",
                     "response_body": (
                         app.packets.notification(
-                            "Por favor contate a staff diretamente para criar a sua conta.",
+                            "Multi-contas detectado. Não será possível efetuar login no fubi.ca.",
                         )
                         + app.packets.user_id(-1)
                     ),
