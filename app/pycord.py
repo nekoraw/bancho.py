@@ -42,7 +42,7 @@ def create_beatmapset_changes_embed(beatmapset:BeatmapSet, new_status:RankedStat
     embed.set_thumbnail(url=f"https://b.ppy.sh/thumb/{beatmapset.id}l.jpg")
 
     embed.add_field(
-        name=f"{beatmapset.maps[0].artist} - {beatmapset.maps[0].title} [{beatmapset.maps[0].version}]",
+        name=f"{beatmapset.maps[0].artist} - {beatmapset.maps[0].title}",
         value=(f"**DIFICULDADES NO SET:** {len(beatmapset.maps)}\
         \n **LINK:** https://osu.ppy.sh/beatmapsets/{beatmapset.id}"),
         inline=False
