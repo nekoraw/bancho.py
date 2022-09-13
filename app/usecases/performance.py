@@ -41,8 +41,6 @@ def calculate_performances_std(
         nmisses = score["nmiss"] if score["nmiss"] != None else 0
         combo = score["combo"]
 
-        print(mods,acc,nmisses,combo)
-
         params = ScoreParams(mods = mods, acc = acc, nMisses = nmisses, combo = combo)
 
         [result] = calculator.calculate(params)
