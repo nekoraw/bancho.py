@@ -36,12 +36,12 @@ def calculate_performances_std(
     calculator = Calculator(osu_file_path)
 
     for score in scores:
-        # mods = score["mods"] if score["mods"] != None else 0
-        # acc = score["acc"] if score["acc"] != None else 100.00
-        # nmisses = score["acc"] if score["acc"] != None else 0
-        # combo = score["combo"] if score["combo"] else -1
+        mods = score["mods"] if score["mods"] != None else 0
+        acc = score["acc"] if score["acc"] != None else 100.00
+        nmisses = score["acc"] if score["acc"] != None else 0
+        combo = score["combo"] if score["combo"] else -1
 
-        params = ScoreParams(mods = score["mods"], acc = score["acc"], nMisses = score["nmiss"], combo = score["combo"])
+        params = ScoreParams(mods = mods, acc = acc, nMisses = nmisses, combo = combo)
 
         [result] = calculator.calculate(params)
 
