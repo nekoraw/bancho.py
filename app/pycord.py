@@ -57,9 +57,11 @@ def create_beatmapset_changes_embed(beatmapset:BeatmapSet, new_status:RankedStat
 
 
 
-async def send_beatmap_status_change(webhook_url:str, beatmap:Beatmap, new_status:RankedStatus, nominator="") -> None:
+async def send_beatmap_status_change(webhook_url:str, beatmap:Beatmap, new_status:RankedStatus, player_info:Player) -> None:
     """Send new ranked status from the beatmap to discord."""
     embed = create_beatmap_changes_embed(beatmap, new_status)
+
+    embed.set_footer(text=f"Autor da Mudança: {player_info.safe_name}", icon_url=f"https://a.fubi.ca/{player_info.id}")
 
     async with aiohttp.ClientSession() as session:
         webhook = Webhook.from_url(webhook_url, session=session)
