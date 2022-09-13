@@ -28,7 +28,7 @@ async def send_beatmap_status_change(webhook_url:str, beatmap:Beatmap, new_statu
     """Send new ranked status from the beatmap to discord."""
     async with aiohttp.ClientSession() as session:
         webhook = Webhook.from_url(webhook_url, session=session)
-        await webhook.send(embed=create_beatmap_changes_embed(beatmap, new_status), username="Beatmap Updates")
+        await webhook.send(embed=create_beatmap_changes_embed(beatmap, new_status))
     
 
 
