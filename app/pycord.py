@@ -23,8 +23,8 @@ def create_beatmap_changes_embed(beatmap:Beatmap, new_status:RankedStatus) -> Em
 
     embed.add_field(
         name=f"{beatmap.artist} - {beatmap.title} [{beatmap.version}]",
-        value=(f"**{star_rating}** - CS **{beatmap.cs}** - AR **{beatmap.ar}** - BPM **{beatmap.bpm}**\
-        \n **LINK:** {beatmap.url}"),
+        value=(f"**{star_rating}** - **CS** {beatmap.cs} - **AR** {beatmap.ar} - **BPM** {beatmap.bpm}\
+        \n **LINK:** https://osu.ppy.sh/beatmapsets/{beatmap.set_id}"),
         inline=False
     )
 
@@ -44,7 +44,7 @@ def create_beatmapset_changes_embed(beatmapset:BeatmapSet, new_status:RankedStat
     embed.add_field(
         name=f"{beatmapset.maps[0].artist} - {beatmapset.maps[0].title} [{beatmapset.maps[0].version}]",
         value=(f"**DIFICULDADES NO SET:** {len(beatmapset.maps)}\
-        \n **LINK:** {beatmapset.url}"),
+        \n **LINK:** https://osu.ppy.sh/beatmapsets/{beatmapset.id}"),
         inline=False
     )
 
