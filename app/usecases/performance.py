@@ -4,11 +4,6 @@ import math
 from typing import Optional
 from typing import TypedDict
 
-try:  # TODO: ask asottile about this
-    from oppai_ng.oppai import OppaiWrapper
-except ModuleNotFoundError:
-    pass  # utils will handle this for us
-
 from peace_performance_python.objects import Beatmap as PeaceMap
 from peace_performance_python.objects import Calculator as PeaceCalculator
 

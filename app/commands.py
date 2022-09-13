@@ -65,11 +65,6 @@ from app.usecases.performance import ScoreDifficultyParams
 from app.utils import make_safe_name
 from app.utils import seconds_readable
 
-try:
-    from oppai_ng.oppai import OppaiWrapper
-except ModuleNotFoundError:
-    pass  # utils will handle this for us
-
 from rosu_pp_py import Calculator, ScoreParams
 
 if TYPE_CHECKING:
