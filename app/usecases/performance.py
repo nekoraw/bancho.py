@@ -39,7 +39,7 @@ def calculate_performances_std(
         mods = score["mods"] if score["mods"] != None else 0
         acc = score["acc"] if score["acc"] != None else 100.00
         nmisses = score["nmiss"] if score["nmiss"] != None else 0
-        combo = score["combo"] if score["combo"] else -1
+        combo = score["combo"]
 
         print(mods,acc,nmisses,combo)
 
