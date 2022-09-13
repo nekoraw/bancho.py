@@ -2,6 +2,7 @@
 
 from typing import Union
 import requests
+from app.objects.player import Player
 
 import app.state.services
 from app.objects.beatmap import Beatmap, BeatmapSet, RankedStatus
@@ -65,21 +66,11 @@ async def send_beatmap_status_change(webhook_url:str, beatmap:Beatmap, new_statu
         await webhook.send(embed=embed)
     
 
-async def send_beatmapset_status_change(webhook_url:str, beatmapset:BeatmapSet, new_status:RankedStatus, nominator="") -> None:
+async def send_beatmapset_status_change(webhook_url:str, beatmapset:BeatmapSet, new_status:RankedStatus, player_info:Player) -> None:
     """Send new ranked status from the beatmapset to discord."""
     embed = create_beatmapset_changes_embed(beatmapset, new_status)
 
-    user_info = await app.state.services.database.fetch_one(
-            "SELECT id, name, safe_name, "
-            "priv, clan_id, country, silence_end, donor_end "
-            "FROM users WHERE safe_name = :username",
-            {"username": nominator.lower()},
-        )
-
-    print(user_info)
-
-    if (nominator != ""):
-        embed.set_footer(text=f"Autor da Mudança: {nominator}", icon_url=user_info["info"]["id"])
+    embed.set_footer(text=f"Autor da Mudança: {player_info.safe_name}", icon_url=f"https://a.fubi.ca/{player_info.id}")
 
     async with aiohttp.ClientSession() as session:
         webhook = Webhook.from_url(webhook_url, session=session)
