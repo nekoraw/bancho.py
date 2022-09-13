@@ -1,10 +1,14 @@
 """Discord utilities that use pycord."""
 
 from typing import Union
+import requests
+
+import app.state.services
+from app.objects.beatmap import Beatmap, BeatmapSet, RankedStatus
 
 from discord.colour import Colour
-from app.objects.beatmap import Beatmap, BeatmapSet, RankedStatus
 from discord import Webhook, Embed
+
 import aiohttp
 
 
@@ -52,7 +56,7 @@ def create_beatmapset_changes_embed(beatmapset:BeatmapSet, new_status:RankedStat
 
 
 
-async def send_beatmap_status_change(webhook_url:str, beatmap:Beatmap, new_status:RankedStatus) -> None:
+async def send_beatmap_status_change(webhook_url:str, beatmap:Beatmap, new_status:RankedStatus, nominator="") -> None:
     """Send new ranked status from the beatmap to discord."""
     embed = create_beatmap_changes_embed(beatmap, new_status)
 
@@ -61,9 +65,21 @@ async def send_beatmap_status_change(webhook_url:str, beatmap:Beatmap, new_statu
         await webhook.send(embed=embed)
     
 
-async def send_beatmapset_status_change(webhook_url:str, beatmapset:BeatmapSet, new_status:RankedStatus) -> None:
+async def send_beatmapset_status_change(webhook_url:str, beatmapset:BeatmapSet, new_status:RankedStatus, nominator="") -> None:
     """Send new ranked status from the beatmapset to discord."""
     embed = create_beatmapset_changes_embed(beatmapset, new_status)
+
+    user_info = await app.state.services.database.fetch_one(
+            "SELECT id, name, safe_name, "
+            "priv, clan_id, country, silence_end, donor_end "
+            "FROM users WHERE safe_name = :username",
+            {"username": nominator.lower()},
+        )
+
+    print(user_info)
+
+    if (nominator != ""):
+        embed.set_footer(text=f"Autor da Mudança: {nominator}", icon_url=user_info["info"]["id"])
 
     async with aiohttp.ClientSession() as session:
         webhook = Webhook.from_url(webhook_url, session=session)

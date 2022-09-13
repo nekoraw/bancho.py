@@ -712,7 +712,7 @@ async def _map(ctx: Context) -> Optional[str]:
             ]
 
             if webhook_url := app.settings.DISCORD_BANCHO_UPDATES_WEBHOOK:
-                await app.pycord.send_beatmapset_status_change(webhook_url, app.state.cache.beatmapset[bmap.set_id], new_status)
+                await app.pycord.send_beatmapset_status_change(webhook_url, app.state.cache.beatmapset[bmap.set_id], new_status, nominator=ctx.player.safe_name)
 
 
             for bmap in app.state.cache.beatmapset[bmap.set_id].maps:
@@ -729,7 +729,7 @@ async def _map(ctx: Context) -> Optional[str]:
 
             if bmap.md5 in app.state.cache.beatmap:
                 if webhook_url := app.settings.DISCORD_BANCHO_UPDATES_WEBHOOK:
-                    await app.pycord.send_beatmap_status_change(webhook_url, app.state.cache.beatmap[bmap.md5], new_status)
+                    await app.pycord.send_beatmap_status_change(webhook_url, app.state.cache.beatmap[bmap.md5], new_status, nominator=ctx.player.safe_name)
 
                 app.state.cache.beatmap[bmap.md5].status = new_status
 
