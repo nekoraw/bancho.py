@@ -748,6 +748,7 @@ async def login(
         clan_priv=clan_priv,
         tourney_client=osu_version.stream == "tourney",
         client_details=client_details,
+        country=db_country
     )
 
     data = bytearray(app.packets.protocol_version(19))

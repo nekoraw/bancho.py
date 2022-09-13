@@ -291,6 +291,7 @@ class Player:
 
         self.utc_offset = extras.get("utc_offset", 0)
         self.pm_private = extras.get("pm_private", False)
+        self.country = extras.get("country", "zz")
         self.away_msg: Optional[str] = None
         self.silence_end = extras.get("silence_end", 0)
         self.donor_end = extras.get("donor_end", 0)
@@ -998,7 +999,7 @@ class Player:
         return rank + 1 if rank is not None else 0
 
     async def update_rank(self, mode: GameMode) -> int:
-        country = self.geoloc["country"]["acronym"]
+        country = self.country
         stats = self.stats[mode]
 
         if not self.restricted:

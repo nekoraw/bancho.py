@@ -42,4 +42,4 @@ urllib3==1.26.9
 uvicorn==0.17.6
 uvloop==0.16.0
 yarl==1.7.2
-rosu_pp_py=0.8.0
+rosu_pp_py==0.8.0
