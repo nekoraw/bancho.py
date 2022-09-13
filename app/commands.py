@@ -37,6 +37,7 @@ import timeago
 from pytimeparse.timeparse import timeparse
 
 import app.logging
+import app.pycord
 import app.packets
 import app.settings
 import app.state
@@ -711,8 +712,11 @@ async def _map(ctx: Context) -> Optional[str]:
             ]
 
             for bmap in app.state.cache.beatmapset[bmap.set_id].maps:
-                bmap.status = new_status
+                if webhook_url := app.settings.DISCORD_BANCHO_UPDATES_WEBHOOK:
+                    app.pycord.send_beatmap_status_change(webhook_url, bmap, new_status)
 
+                bmap.status = new_status
+                
         else:
             # update only map
             await db_conn.execute(
@@ -723,6 +727,9 @@ async def _map(ctx: Context) -> Optional[str]:
             map_ids = [bmap.id]
 
             if bmap.md5 in app.state.cache.beatmap:
+                if webhook_url := app.settings.DISCORD_BANCHO_UPDATES_WEBHOOK:
+                    app.pycord.send_beatmap_status_change(webhook_url, app.state.cache.beatmap[bmap.md5], new_status)
+
                 app.state.cache.beatmap[bmap.md5].status = new_status
 
         # deactivate rank requests for all ids
