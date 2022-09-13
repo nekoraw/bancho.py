@@ -4,11 +4,6 @@ import math
 from typing import Optional
 from typing import TypedDict
 
-try:  # TODO: ask asottile about this
-    from oppai_ng.oppai import OppaiWrapper
-except ModuleNotFoundError:
-    pass  # utils will handle this for us
-
 from peace_performance_python.objects import Beatmap as PeaceMap
 from peace_performance_python.objects import Calculator as PeaceCalculator
 
@@ -41,7 +36,12 @@ def calculate_performances_std(
     calculator = Calculator(osu_file_path)
 
     for score in scores:
-        params = ScoreParams(mods = score["mods"], acc = score["acc"], nMisses = score["nmiss"], combo = score["combo"])
+        mods = score["mods"] if score["mods"] != None else 0
+        acc = score["acc"] if score["acc"] != None else 100.00
+        nmisses = score["nmiss"] if score["nmiss"] != None else 0
+        combo = score["combo"]
+
+        params = ScoreParams(mods = mods, acc = acc, nMisses = nmisses, combo = combo)
 
         [result] = calculator.calculate(params)
 
