@@ -36,6 +36,22 @@ def calculate_performances_std(
     calculator = Calculator(osu_file_path)
 
     for score in scores:
+        # function_parameters = {
+        #     "mods":score["mods"],
+        #     "acc":score["acc"],
+        #     "nMisses":score["nmiss"],
+        #     "combo": score["combo"]
+        # }
+
+        if (score["mods"] == None) or (score["acc"] == None) or (score["nmiss"] == None) or (score["combo"] == None):
+            pp = 0.0
+            sr = 0.0
+            print(score)
+            return {
+                "performance": pp,
+                "star_rating": sr,
+            },
+
         params = ScoreParams(mods = score["mods"], acc = score["acc"], nMisses = score["nmiss"], combo = score["combo"])
 
         [result] = calculator.calculate(params)
