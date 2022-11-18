@@ -586,6 +586,17 @@ class BeatmapSet:
         """The online url for this beatmap set."""
         return f"https://osu.{app.settings.DOMAIN}/beatmapsets/{self.id}"
 
+    @property  # perhaps worth caching some of?
+    def as_dict(self) -> dict[str, object]:
+        maps = []
+        for map in self.maps:
+            maps.append(map.as_dict)
+
+        return {
+            "id": self.id,
+            "maps": maps
+        }
+
     def all_officially_ranked_or_approved(self) -> bool:
         """Whether all the maps in the set are
         ranked or approved on official servers."""

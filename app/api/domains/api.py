@@ -20,7 +20,7 @@ import app.state
 from app.constants import regexes
 from app.constants.gamemodes import GameMode
 from app.constants.mods import Mods
-from app.objects.beatmap import Beatmap
+from app.objects.beatmap import Beatmap, BeatmapSet
 from app.objects.clan import Clan
 from app.objects.player import Player
 from app.state.services import acquire_db_conn
@@ -618,6 +618,30 @@ async def api_get_map_scores(
             "scores": [dict(row) for row in rows],
         },
     )
+
+@router.get("/get_set_info")
+async def api_get_set_info(set_id: Optional[int] = Query(None, alias="id", ge=3, le=2_147_483_647)):
+    if set_id is not None:
+        bmset = await BeatmapSet.from_bsid(set_id)
+    else:
+        return ORJSONResponse(
+            {"status": "Must provide parameter 'id'!"},
+            status_code=status.HTTP_400_BAD_REQUEST,
+        )
+
+    if not bmset:
+        return ORJSONResponse(
+            {"status": "Set not found."},
+            status_code=status.HTTP_404_NOT_FOUND,
+        )
+
+    return ORJSONResponse(
+        {
+            "status": "success",
+            "map": bmset.as_dict,
+        },
+    )
+
 
 
 @router.get("/get_score_info")
