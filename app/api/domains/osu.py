@@ -2024,12 +2024,12 @@ async def difficultyRatingHandler(request: Request):
 async def beatmapset_redirect(beatmap_id: Optional[int] = None):
     if beatmap_id == None:
         return ORJSONResponse(
-            content={"status": f"No beatmapset id specified."},
+            content={"status": f"No beatmap id specified."},
             status_code=status.HTTP_404_NOT_FOUND,
         )
 
     return RedirectResponse(
-        url=f"https://{app.settings.DOMAIN}/beatmapsets/{beatmap_id}",
+        url=f"https://{app.settings.DOMAIN}/beatmaps/{beatmap_id}",
         status_code=status.HTTP_301_MOVED_PERMANENTLY
     )
 
