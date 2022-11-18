@@ -2017,3 +2017,40 @@ async def difficultyRatingHandler(request: Request):
         url=f"https://osu.ppy.sh{request['path']}",
         status_code=status.HTTP_307_TEMPORARY_REDIRECT,
     )
+
+# Redirects
+
+@router.get("/beatmaps/{beatmap_id}")
+async def beatmapset_redirect(beatmap_id: Optional[int] = None):
+    if beatmap_id == None:
+        return ORJSONResponse(
+            content={"status": f"No beatmap id specified."},
+            status_code=status.HTTP_404_NOT_FOUND,
+        )
+
+    return RedirectResponse(
+        url=f"https://{app.settings.DOMAIN}/beatmaps/{beatmap_id}",
+        status_code=status.HTTP_301_MOVED_PERMANENTLY
+    )
+
+
+@router.get("/u/{user_id}")
+async def beatmapset_redirect(user_id: Optional[int] = None):
+    if user_id == None:
+        return ORJSONResponse(
+            content={"status": f"No user id specified."},
+            status_code=status.HTTP_404_NOT_FOUND,
+        )
+
+    return RedirectResponse(
+        url=f"https://{app.settings.DOMAIN}/u/{user_id}",
+        status_code=status.HTTP_301_MOVED_PERMANENTLY
+    )
+
+
+@router.get("/")
+async def redirect_home():
+    return RedirectResponse(
+        url=f"https://{app.settings.DOMAIN}",
+        status_code=status.HTTP_301_MOVED_PERMANENTLY
+    )
