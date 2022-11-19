@@ -516,7 +516,7 @@ async def api_get_map_info(
 @router.get("/get_map_scores")
 async def api_get_map_scores(
     scope: Literal["recent", "best"],
-    sort: Optional[Literal["max_combo", "pp", "acc", "score"]] = None,
+    sort: Optional[Literal["max_combo", "pp", "acc", "score", "play_time"]] = None,
     map_id: Optional[int] = Query(None, alias="id", ge=0, le=2_147_483_647),
     map_md5: Optional[str] = Query(None, alias="md5", min_length=32, max_length=32),
     mods_arg: Optional[str] = Query(None, alias="mods"),
