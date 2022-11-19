@@ -512,7 +512,7 @@ async def osuSearchHandler(
                 if resp.status == status.HTTP_404_NOT_FOUND:
                     return b"0"
 
-            return b"-1\nFailed to retrieve data from the beatmap mirror."
+            return b"-1\nFalha ao adquirir dados do mirror de beatmap."
 
         if USING_NASUYA:
             # nasuya returns in osu!direct format
@@ -521,8 +521,8 @@ async def osuSearchHandler(
         result = await resp.json()
 
         if USING_CHIMU:
-            if result["code"] != 0:
-                return b"-1\nFailed to retrieve data from the beatmap mirror."
+            if result["code"] != 200:
+                return b"-1\nFalha ao adquirir dados do mirror de beatmap."
 
             result = result["data"]
 
