@@ -604,7 +604,7 @@ async def api_get_map_scores(
     # unlike /get_player_scores, we'll sort by score/pp depending
     # on the mode played, since we want to replicated leaderboards.
     if scope == "best":
-        if sort == None :
+        if sort is None :
             sort = "pp" if mode >= GameMode.RELAX_OSU else "score"
     else:  # recent
         sort = "play_time"
