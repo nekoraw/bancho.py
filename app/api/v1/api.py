@@ -511,6 +511,7 @@ async def api_get_map_info(
 @router.get("/get_map_scores")
 async def api_get_map_scores(
     scope: Literal["recent", "best"],
+    sort: Optional[Literal["max_combo", "pp", "acc", "score", "play_time"]] = None,
     map_id: Optional[int] = Query(None, alias="id", ge=0, le=2_147_483_647),
     map_md5: Optional[str] = Query(None, alias="md5", min_length=32, max_length=32),
     mods_arg: Optional[str] = Query(None, alias="mods"),
@@ -597,7 +598,8 @@ async def api_get_map_scores(
     # unlike /get_player_scores, we'll sort by score/pp depending
     # on the mode played, since we want to replicated leaderboards.
     if scope == "best":
-        sort = "pp" if mode >= GameMode.RELAX_OSU else "score"
+        if sort is None :
+            sort = "pp" if mode >= GameMode.RELAX_OSU else "score"
     else:  # recent
         sort = "play_time"
 
