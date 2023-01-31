@@ -406,10 +406,10 @@ async def lastFM(
             app.packets.notification(
                 "\n".join(
                     [
-                        "Hey!",
-                        "It appears you have hq!osu's multiaccounting tool (relife) enabled.",
-                        "This tool leaves a change in your registry that the osu! client can detect.",
-                        "Please re-install relife and disable the program to avoid any restrictions.",
+                        "Ei!",
+                        "Parece que você tem a ferramenta de multiaccount hq!osu's (relife) habilitada.",
+                        "Essa ferramente deixa uma mudança no seu registro que o client do osu! consegue detectar.",
+                        "Por favor, reinstale relife e desative o programa para evitar quaisquer restrições.",
                     ],
                 ),
             ),
@@ -495,7 +495,7 @@ async def osuSearchHandler(
                 if resp.status == status.HTTP_404_NOT_FOUND:
                     return b"0"
 
-            return b"-1\nFailed to retrieve data from the beatmap mirror."
+            return b"-1\nFalha ao adquirir dados do mirror de beatmap."
 
         if USING_NASUYA:
             # nasuya returns in osu!direct format
@@ -504,8 +504,8 @@ async def osuSearchHandler(
         result = await resp.json()
 
         if USING_CHIMU:
-            if result["code"] != 0:
-                return b"-1\nFailed to retrieve data from the beatmap mirror."
+            if result["code"] != 200:
+                return b"-1\nFalha ao adquirir dados do mirror de beatmap."
 
             result = result["data"]
 
@@ -883,7 +883,7 @@ async def osuSubmitModularSelector(
 
             score.player.enqueue(
                 app.packets.notification(
-                    f"You achieved #{score.rank}! ({performance})",
+                    f"Você alcançou #{score.rank} no mapa! ({performance})",
                 ),
             )
 
@@ -1863,131 +1863,8 @@ async def peppyDMHandler():
 
 
 @router.post("/users")
-async def register_account(
-    request: Request,
-    username: str = Form(..., alias="user[username]"),
-    email: str = Form(..., alias="user[user_email]"),
-    pw_plaintext: str = Form(..., alias="user[password]"),
-    check: int = Form(...),
-    cloudflare_country: Optional[str] = Header(None, alias="CF-IPCountry"),
-    #
-    # TODO: allow nginx to be optional
-    forwarded_ip: str = Header(..., alias="X-Forwarded-For"),
-    real_ip: str = Header(..., alias="X-Real-IP"),
-):
-    if not all((username, email, pw_plaintext)):
-        return Response(
-            content=b"Missing required params",
-            status_code=status.HTTP_400_BAD_REQUEST,
-        )
-
-    # ensure all args passed
-    # are safe for registration.
-    errors: Mapping[str, list[str]] = defaultdict(list)
-
-    # Usernames must:
-    # - be within 2-15 characters in length
-    # - not contain both ' ' and '_', one is fine
-    # - not be in the config's `disallowed_names` list
-    # - not already be taken by another player
-    if not regexes.USERNAME.match(username):
-        errors["username"].append("Must be 2-15 characters in length.")
-
-    if "_" in username and " " in username:
-        errors["username"].append('May contain "_" and " ", but not both.')
-
-    if username in app.settings.DISALLOWED_NAMES:
-        errors["username"].append("Disallowed username; pick another.")
-
-    if "username" not in errors:
-        if await players_repo.fetch_one(name=username):
-            errors["username"].append("Username already taken by another player.")
-
-    # Emails must:
-    # - match the regex `^[^@\s]{1,200}@[^@\s\.]{1,30}\.[^@\.\s]{1,24}$`
-    # - not already be taken by another player
-    if not regexes.EMAIL.match(email):
-        errors["user_email"].append("Invalid email syntax.")
-    else:
-        if await players_repo.fetch_one(email=email):
-            errors["user_email"].append("Email already taken by another player.")
-
-    # Passwords must:
-    # - be within 8-32 characters in length
-    # - have more than 3 unique characters
-    # - not be in the config's `disallowed_passwords` list
-    if not 8 <= len(pw_plaintext) <= 32:
-        errors["password"].append("Must be 8-32 characters in length.")
-
-    if len(set(pw_plaintext)) <= 3:
-        errors["password"].append("Must have more than 3 unique characters.")
-
-    if pw_plaintext.lower() in app.settings.DISALLOWED_PASSWORDS:
-        errors["password"].append("That password was deemed too simple.")
-
-    if errors:
-        # we have errors to send back, send them back delimited by newlines.
-        errors = {k: ["\n".join(v)] for k, v in errors.items()}
-        errors_full = {"form_error": {"user": errors}}
-        return ORJSONResponse(
-            content=errors_full,
-            status_code=status.HTTP_400_BAD_REQUEST,
-        )
-
-    if check == 0:
-        # the client isn't just checking values,
-        # they want to register the account now.
-        # make the md5 & bcrypt the md5 for sql.
-        pw_md5 = hashlib.md5(pw_plaintext.encode()).hexdigest().encode()
-        pw_bcrypt = bcrypt.hashpw(pw_md5, bcrypt.gensalt())
-        app.state.cache.bcrypt[pw_bcrypt] = pw_md5  # cache result for login
-
-        if cloudflare_country:
-            # best case, dev has enabled ip geolocation in the
-            # network tab of cloudflare, so it sends the iso code.
-            country_acronym = cloudflare_country.lower()
-        else:
-            # backup method, get the user's ip and
-            # do a db lookup to get their country.
-            ip = app.state.services.ip_resolver.get_ip(request.headers)
-
-            if not ip.is_private:
-                if app.state.services.geoloc_db is not None:
-                    # decent case, dev has downloaded a geoloc db from
-                    # maxmind, so we can do a local db lookup. (~1-5ms)
-                    # https://www.maxmind.com/en/home
-                    geoloc = app.state.services.fetch_geoloc_db(ip)
-                else:
-                    # worst case, we must do an external db lookup
-                    # using a public api. (depends, `ping ip-api.com`)
-                    geoloc = await app.state.services.fetch_geoloc_web(ip)
-
-                if geoloc is not None:
-                    country_acronym = geoloc["country"]["acronym"]
-                else:
-                    country_acronym = "xx"
-            else:
-                # localhost, unknown country
-                country_acronym = "xx"
-
-        async with app.state.services.database.transaction():
-            # add to `users` table.
-            player = await players_repo.create(
-                name=username,
-                email=email,
-                pw_bcrypt=pw_bcrypt,
-                country=country_acronym,
-            )
-
-            # add to `stats` table.
-            await stats_repo.create_all_modes(player_id=player["id"])
-
-        if app.state.services.datadog:
-            app.state.services.datadog.increment("bancho.registrations")
-
-        log(f"<{username} ({player['id']})> has registered!", Ansi.LGREEN)
-
-    return b"ok"  # success
+async def register_account(*args, **kwargs):
+    return  # desabilita registro in-game
 
 
 @router.post("/difficulty-rating")
@@ -1995,4 +1872,41 @@ async def difficultyRatingHandler(request: Request):
     return RedirectResponse(
         url=f"https://osu.ppy.sh{request['path']}",
         status_code=status.HTTP_307_TEMPORARY_REDIRECT,
+    )
+
+# Redirects
+
+@router.get("/beatmaps/{beatmap_id}")
+async def beatmapset_redirect(beatmap_id: Optional[int] = None):
+    if beatmap_id == None:
+        return ORJSONResponse(
+            content={"status": f"No beatmap id specified."},
+            status_code=status.HTTP_404_NOT_FOUND,
+        )
+
+    return RedirectResponse(
+        url=f"https://{app.settings.DOMAIN}/beatmaps/{beatmap_id}",
+        status_code=status.HTTP_301_MOVED_PERMANENTLY
+    )
+
+
+@router.get("/u/{user_id}")
+async def beatmapset_redirect(user_id: Optional[int] = None):
+    if user_id == None:
+        return ORJSONResponse(
+            content={"status": f"No user id specified."},
+            status_code=status.HTTP_404_NOT_FOUND,
+        )
+
+    return RedirectResponse(
+        url=f"https://{app.settings.DOMAIN}/u/{user_id}",
+        status_code=status.HTTP_301_MOVED_PERMANENTLY
+    )
+
+
+@router.get("/")
+async def redirect_home():
+    return RedirectResponse(
+        url=f"https://{app.settings.DOMAIN}",
+        status_code=status.HTTP_301_MOVED_PERMANENTLY
     )

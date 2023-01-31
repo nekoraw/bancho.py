@@ -115,11 +115,11 @@ class Status:
 
 # temporary menu-related stuff
 async def bot_hello(player: Player) -> None:
-    player.send_bot(f"hello {player.name}!")
+    player.send_bot(f"olá {player.name}!")
 
 
 async def notif_hello(player: Player) -> None:
-    player.enqueue(app.packets.notification(f"hello {player.name}!"))
+    player.enqueue(app.packets.notification(f"olá {player.name}!"))
 
 
 MENU2 = Menu(
@@ -730,7 +730,7 @@ class Player:
 
             if self in self.match._refs:
                 self.match._refs.remove(self)
-                self.match.chat.send_bot(f"{self.name} removed from match referees.")
+                self.match.chat.send_bot(f"{self.name} removido dos juízes da partida.")
 
             # notify others of our deprature
             self.match.enqueue_state()
