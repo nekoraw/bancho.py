@@ -224,7 +224,7 @@ class SendMessage(BasePacket):
 
     async def handle(self, player: Player) -> None:
         if player.silenced:
-            log(f"{player} sent a message while silenced.", Ansi.LYELLOW)
+            log(f"{player} enviou uma mensagem enquanto estava silenciado.", Ansi.LYELLOW)
             return
 
         # remove leading/trailing whitespace
@@ -258,15 +258,15 @@ class SendMessage(BasePacket):
             t_chan = app.state.sessions.channels[recipient]
 
         if not t_chan:
-            log(f"{player} wrote to non-existent {recipient}.", Ansi.LYELLOW)
+            log(f"{player} escreveu para o inexistente {recipient}.", Ansi.LYELLOW)
             return
 
         if player not in t_chan:
-            log(f"{player} wrote to {recipient} without being in it.")
+            log(f"{player} escreveu para {recipient} sem estar presente nele.")
             return
 
         if not t_chan.can_write(player.priv):
-            log(f"{player} wrote to {recipient} with insufficient privileges.")
+            log(f"{player} escreveu para {recipient} com privilégios insuficientes.")
             return
 
         # limit message length to 2k chars
@@ -726,7 +726,7 @@ async def login(
                     "osu_token": "login-failed",
                     "response_body": (
                         app.packets.notification(
-                            f"{BASE_DOMAIN}: Login failed. Please contact an admin.",
+                            f"{BASE_DOMAIN}: Falha no login. Por favor contate um admin.",
                         )
                         + app.packets.user_id(-1)
                     ),
@@ -737,7 +737,7 @@ async def login(
         if db_country == "xx":
             # bugfix for old bancho.py versions when
             # country wasn't stored on registration.
-            log(f"Fixing {login_data['username']}'s country.", Ansi.LGREEN)
+            log(f"Arrumando o país de {login_data['username']}.", Ansi.LGREEN)
 
             await db_conn.execute(
                 "UPDATE users SET country = :country WHERE id = :user_id",
@@ -944,7 +944,7 @@ async def login(
     country_code = player.geoloc["country"]["acronym"].upper()
 
     log(
-        f"{player} logged in from {country_code} using {login_data['osu_version']} on {user_os}",
+        f"{player} fez login do {country_code} na versão {login_data['osu_version']} no {user_os}.",
         Ansi.LCYAN,
     )
 
@@ -962,7 +962,7 @@ class StartSpectating(BasePacket):
         new_host = app.state.sessions.players.get(id=self.target_id)
         if not new_host:
             log(
-                f"{player} tried to spectate nonexistant id {self.target_id}.",
+                f"{player} tentou espectar ao id não existente {self.target_id}.",
                 Ansi.LYELLOW,
             )
             return
@@ -996,7 +996,7 @@ class StopSpectating(BasePacket):
         host = player.spectating
 
         if not host:
-            log(f"{player} tried to stop spectating when they're not..?", Ansi.LRED)
+            log(f"{player} tentou parar de espectar quando não está..?", Ansi.LRED)
             return
 
         host.remove_spectator(player)
@@ -1030,7 +1030,7 @@ class SpectateFrames(BasePacket):
 class CantSpectate(BasePacket):
     async def handle(self, player: Player) -> None:
         if not player.spectating:
-            log(f"{player} sent can't spectate while not spectating?", Ansi.LRED)
+            log(f"{player} enviou 'incapaz de espectar' enquanto não está espectando?", Ansi.LRED)
             return
 
         if not player.stealth:
@@ -1051,7 +1051,7 @@ class SendPrivateMessage(BasePacket):
     async def handle(self, player: Player) -> None:
         if player.silenced:
             if app.settings.DEBUG:
-                log(f"{player} tried to send a dm while silenced.", Ansi.LYELLOW)
+                log(f"{player} tentou enviar um DM enquanto silenciado", Ansi.LYELLOW)
             return
 
         # remove leading/trailing whitespace

@@ -40,7 +40,7 @@ async def api_get_beatmaps(**params: Any) -> Optional[list[dict[str, Any]]]:
     Optionally use Kitsu's API if the user has not provided an osu! api key.
     """
     if app.settings.DEBUG:
-        log(f"Doing api (getbeatmaps) request {params}", Ansi.LMAGENTA)
+        log(f"Fazendo requisição de api (getbeatmaps) {params}", Ansi.LMAGENTA)
 
     if app.settings.OSU_API_KEY:
         # https://github.com/ppy/osu-api/wiki#apiget_beatmaps
@@ -71,7 +71,7 @@ async def ensure_local_osu_file(
     ):
         # need to get the file from the osu!api
         if app.settings.DEBUG:
-            log(f"Doing osu!api (.osu file) request {bmap_id}", Ansi.LMAGENTA)
+            log(f"Fazendo requisição de osu!api (.osu file) {bmap_id}", Ansi.LMAGENTA)
 
         url = f"https://old.ppy.sh/osu/{bmap_id}"
         async with app.state.services.http_client.get(url) as resp:

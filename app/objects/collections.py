@@ -99,25 +99,25 @@ class Channels(list[Channel]):
         super().append(channel)
 
         if app.settings.DEBUG:
-            log(f"{channel} added to channels list.")
+            log(f"Adicionado {channel} à lista de canais.")
 
     def extend(self, channels: Iterable[Channel]) -> None:
         """Extend the list with `channels`."""
         super().extend(channels)
 
         if app.settings.DEBUG:
-            log(f"{channels} added to channels list.")
+            log(f"Adicionado {channels} à lista de canais.")
 
     def remove(self, channel: Channel) -> None:
         """Remove `channel` from the list."""
         super().remove(channel)
 
         if app.settings.DEBUG:
-            log(f"{channel} removed from channels list.")
+            log(f"Removido {channel} da lista de canais.")
 
     async def prepare(self, db_conn: databases.core.Connection) -> None:
         """Fetch data from sql & return; preparing to run the server."""
-        log("Fetching channels from sql.", Ansi.LCYAN)
+        log("Recolhendo canais do sql.", Ansi.LCYAN)
         for row in await channels_repo.fetch_many():
             self.append(
                 Channel(
@@ -159,11 +159,11 @@ class Matches(list[Optional[Match]]):
             self[free] = match
 
             if app.settings.DEBUG:
-                log(f"{match} added to matches list.")
+                log(f"Partida {match} adicionada à lista de partidas..")
 
             return True
         else:
-            log(f"Match list is full! Could not add {match}.")
+            log(f"Lista de partidas está cheia! Incapaz de adicionar {match}.")
             return False
 
     # TODO: extend
@@ -176,7 +176,7 @@ class Matches(list[Optional[Match]]):
                 break
 
         if app.settings.DEBUG:
-            log(f"{match} removed from matches list.")
+            log(f"Partida {match} removida da lista de partidas.")
 
 
 class Players(list[Player]):
@@ -323,7 +323,7 @@ class Players(list[Player]):
         """Append `p` to the list."""
         if player in self:
             if app.settings.DEBUG:
-                log(f"{player} double-added to global player list?")
+                log(f"{player} adicionado duas vezes à lista global de jogadores?")
             return
 
         super().append(player)
@@ -332,7 +332,7 @@ class Players(list[Player]):
         """Remove `p` from the list."""
         if player not in self:
             if app.settings.DEBUG:
-                log(f"{player} removed from player list when not online?")
+                log(f"{player} removido da lista de jogadores enquanto não estava online?")
             return
 
         super().remove(player)
@@ -403,25 +403,25 @@ class MapPools(list[MapPool]):
         super().append(mappool)
 
         if app.settings.DEBUG:
-            log(f"{mappool} added to mappools list.")
+            log(f"Mappool {mappool} adicionada à lista de mappools.")
 
     def extend(self, mappools: Iterable[MapPool]) -> None:
         """Extend the list with `mappools`."""
         super().extend(mappools)
 
         if app.settings.DEBUG:
-            log(f"{mappools} added to mappools list.")
+            log(f"Mappools {mappools} adicionadas à lista de mappools.")
 
     def remove(self, mappool: MapPool) -> None:
         """Remove `mappool` from the list."""
         super().remove(mappool)
 
         if app.settings.DEBUG:
-            log(f"{mappool} removed from mappools list.")
+            log(f"Mappool {mappool} removida da lista de mappools.")
 
     async def prepare(self, db_conn: databases.core.Connection) -> None:
         """Fetch data from sql & return; preparing to run the server."""
-        log("Fetching mappools from sql.", Ansi.LCYAN)
+        log("Recolhendo mappools do sql.", Ansi.LCYAN)
         for row in await db_conn.fetch_all("SELECT * FROM tourney_pools"):
             created_by = await app.state.sessions.players.from_cache_or_sql(
                 id=row["created_by"],
@@ -497,25 +497,25 @@ class Clans(list[Clan]):
         super().append(clan)
 
         if app.settings.DEBUG:
-            log(f"{clan} added to clans list.")
+            log(f"Clã {clan} adicionado à lista de clãs.")
 
     def extend(self, clans: Iterable[Clan]) -> None:
         """Extend the list with `clans`."""
         super().extend(clans)
 
         if app.settings.DEBUG:
-            log(f"{clans} added to clans list.")
+            log(f"Clãs {clans} adicionados à lista de clãs.")
 
     def remove(self, clan: Clan) -> None:
         """Remove `clan` from the list."""
         super().remove(clan)
 
         if app.settings.DEBUG:
-            log(f"{clan} removed from clans list.")
+            log(f"Clã {clan} removido da lista de clãs.")
 
     async def prepare(self, db_conn: databases.core.Connection) -> None:
         """Fetch data from sql & return; preparing to run the server."""
-        log("Fetching clans from sql.", Ansi.LCYAN)
+        log("Recolhendo clãs do sql.", Ansi.LCYAN)
         for row in await clans_repo.fetch_many():
             clan_members = await players_repo.fetch_many(clan_id=row["id"])
             clan = Clan(

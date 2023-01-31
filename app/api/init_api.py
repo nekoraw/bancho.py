@@ -73,7 +73,7 @@ def init_exception_handlers(asgi_app: BanchoAPI) -> None:
         exc: RequestValidationError,
     ) -> Response:
         """Wrapper around 422 validation errors to print out info for devs."""
-        log(f"Validation error on {request.url}", Ansi.LRED)
+        log(f"Erro de validação em {request.url}", Ansi.LRED)
         pprint.pprint(exc.errors())
 
         return ORJSONResponse(
@@ -121,7 +121,7 @@ def init_events(asgi_app: BanchoAPI) -> None:
 
         if os.geteuid() == 0:
             log(
-                "Running the server with root privileges is not recommended.",
+                "Rodar o servidor com privilégios de root não é recomendado.",
                 Ansi.LRED,
             )
 
@@ -147,8 +147,8 @@ def init_events(asgi_app: BanchoAPI) -> None:
 
         await app.bg_loops.initialize_housekeeping_tasks()
 
-        log("Startup process complete.", Ansi.LGREEN)
-        log(f"Listening @ {app.settings.SERVER_ADDR}", Ansi.LMAGENTA)
+        log("Processo de inicialização completo.", Ansi.LGREEN)
+        log(f"Escutando em {app.settings.SERVER_ADDR}", Ansi.LMAGENTA)
 
     @asgi_app.on_event("shutdown")
     async def on_shutdown() -> None:

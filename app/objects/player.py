@@ -455,7 +455,7 @@ class Player:
 
             app.state.sessions.players.enqueue(app.packets.logout(self.id))
 
-        log(f"{self} logged out.", Ansi.LYELLOW)
+        log(f"{self} desconectou.", Ansi.LYELLOW)
 
     async def update_privs(self, new: Privileges) -> None:
         """Update `self`'s privileges to `new`."""
@@ -524,7 +524,7 @@ class Player:
                 self.id,
             )
 
-        log_msg = f"{admin} restricted {self} for: {reason}."
+        log_msg = f"{admin} restringiu {self} por: {reason}."
 
         log(log_msg, Ansi.LRED)
 
@@ -562,7 +562,7 @@ class Player:
                 {str(self.id): stats.pp},
             )
 
-        log_msg = f"{admin} unrestricted {self} for: {reason}."
+        log_msg = f"{admin} retirou a restrição de {self} por: {reason}."
 
         log(log_msg, Ansi.LRED)
 
@@ -602,7 +602,7 @@ class Player:
         if self.match:
             self.leave_match()
 
-        log(f"Silenced {self}.", Ansi.LCYAN)
+        log(f"Silenciou {self}.", Ansi.LCYAN)
 
     async def unsilence(self, admin: Player, reason: str) -> None:
         """Unsilence `self`, and log to sql."""
@@ -623,12 +623,12 @@ class Player:
         # inform the user's client
         self.enqueue(app.packets.silence_end(0))
 
-        log(f"Unsilenced {self}.", Ansi.LCYAN)
+        log(f"Dessilenciou {self}.", Ansi.LCYAN)
 
     def join_match(self, match: Match, passwd: str) -> bool:
         """Attempt to add `self` to `match`."""
         if self.match:
-            log(f"{self} tried to join multiple matches?")
+            log(f"{self} tentou juntar-se à várias partidas?")
             self.enqueue(app.packets.match_join_fail())
             return False
 
@@ -643,12 +643,12 @@ class Player:
             # NOTE: staff members have override to pw and can
             # simply use any to join a pw protected match.
             if passwd != match.passwd and self not in app.state.sessions.players.staff:
-                log(f"{self} tried to join {match} w/ incorrect pw.", Ansi.LYELLOW)
+                log(f"{self} tentou juntar-se à {match} com senha incorreta.", Ansi.LYELLOW)
                 self.enqueue(app.packets.match_join_fail())
                 return False
             slot_id = match.get_free()
             if slot_id is None:
-                log(f"{self} tried to join a full match.", Ansi.LYELLOW)
+                log(f"{self} tentou juntar-se à uma partida cheia.", Ansi.LYELLOW)
                 self.enqueue(app.packets.match_join_fail())
                 return False
 
@@ -657,7 +657,7 @@ class Player:
             slot_id = 0
 
         if not self.join_channel(match.chat):
-            log(f"{self} failed to join {match.chat}.", Ansi.LYELLOW)
+            log(f"{self} falhou ao juntar-se à {match.chat}.", Ansi.LYELLOW)
             return False
 
         lobby = app.state.sessions.channels["#lobby"]
@@ -683,7 +683,7 @@ class Player:
         """Attempt to remove `self` from their match."""
         if not self.match:
             if app.settings.DEBUG:
-                log(f"{self} tried leaving a match they're not in?", Ansi.LYELLOW)
+                log(f"{self} tentou sair de uma partida em que não está?", Ansi.LYELLOW)
             return
 
         slot = self.match.get_slot(self)
@@ -703,7 +703,7 @@ class Player:
         if all(s.empty() for s in self.match.slots):
             # multi is now empty, chat has been removed.
             # remove the multi from the channels list.
-            log(f"Match {self.match} finished.")
+            log(f"Partida {self.match} finalizada.")
 
             # cancel any pending start timers
             if self.match.starting is not None:
@@ -789,7 +789,7 @@ class Player:
                     player.enqueue(chan_info_packet)
 
         if app.settings.DEBUG:
-            log(f"{self} joined {channel}.")
+            log(f"{self} juntou-se à {channel}.")
 
         return True
 
@@ -824,7 +824,7 @@ class Player:
                     player.enqueue(chan_info_packet)
 
         if app.settings.DEBUG:
-            log(f"{self} left {channel}.")
+            log(f"{self} saiu de {channel}.")
 
     def add_spectator(self, player: Player) -> None:
         """Attempt to add `player` to `self`'s spectators."""
@@ -845,7 +845,7 @@ class Player:
 
         # attempt to join their spectator channel.
         if not player.join_channel(spec_chan):
-            log(f"{self} failed to join {spec_chan}?", Ansi.LYELLOW)
+            log(f"{self} não conseguiu juntar-se à {spec_chan}?", Ansi.LYELLOW)
             return
 
         if not player.stealth:
@@ -864,7 +864,7 @@ class Player:
         self.spectators.append(player)
         player.spectating = self
 
-        log(f"{player} is now spectating {self}.")
+        log(f"{player} agora está espectando {self}.")
 
     def remove_spectator(self, player: Player) -> None:
         """Attempt to remove `player` from `self`'s spectators."""
@@ -892,7 +892,7 @@ class Player:
                 spectator.enqueue(fellow + channel_info)
 
         self.enqueue(app.packets.spectator_left(player.id))
-        log(f"{player} is no longer spectating {self}.")
+        log(f"{player} não está mais espectando {self}.")
 
     async def add_friend(self, player: Player) -> None:
         """Attempt to add `player` to `self`'s friends."""

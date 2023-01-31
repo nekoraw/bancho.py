@@ -133,7 +133,7 @@ class MapPool:
                 # NOTE: it's intentional that this removes
                 # it from not only this pool, but all pools.
                 # TODO: perhaps discord webhook?
-                log(f"Removing {map_id} from pool {self.name} (not found).", Ansi.LRED)
+                log(f"Removendo {map_id} da mappool {self.name} (não encontrado).", Ansi.LRED)
 
                 await db_conn.execute(
                     "DELETE FROM tourney_pool_maps WHERE map_id = :map_id",

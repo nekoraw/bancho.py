@@ -196,7 +196,7 @@ async def osuError(
         player = None
 
     err_desc = f"{feedback} ({exception})"
-    log(f'{player or "Offline user"} sent osu-error: {err_desc}', Ansi.LCYAN)
+    log(f'{player or "Offline user"} enviou erro do osu: {err_desc}', Ansi.LCYAN)
 
     # NOTE: this stacktrace can be a LOT of data
     if app.settings.DEBUG and len(stacktrace) < 2000:
@@ -243,7 +243,7 @@ async def osuScreenshot(
         with ss_file.open("wb") as f:
             f.write(screenshot_view)
 
-    log(f"{player} uploaded {filename}.")
+    log(f"{player} fez upload de {filename}.")
     return Response(filename.encode())
 
 
@@ -270,7 +270,7 @@ async def osuGetBeatmapInfo(
     player: Player = Depends(authenticate_player_session(Query, "u", "h")),
 ):
     num_requests = len(form_data.Filenames) + len(form_data.Ids)
-    log(f"{player} requested info for {num_requests} maps.", Ansi.LCYAN)
+    log(f"{player} pediu informação de {num_requests} mapas.", Ansi.LCYAN)
 
     ret = []
 
@@ -633,7 +633,7 @@ def parse_form_data_score_params(
         assert isinstance(replay_file, StarletteUploadFile), "Invalid replay data"
     except AssertionError as exc:
         # TODO: perhaps better logging?
-        log(f"Failed to validate score multipart data: ({exc.args[0]})", Ansi.LRED)
+        log(f"Falha de validação de dados multipart: ({exc.args[0]})", Ansi.LRED)
         return None
     else:
         return (
@@ -814,7 +814,7 @@ async def osuSubmitModularSelector(
         "SELECT 1 FROM scores WHERE online_checksum = :checksum",
         {"checksum": score.client_checksum},
     ):
-        log(f"{score.player} submitted a duplicate score.", Ansi.LYELLOW)
+        log(f"{score.player} submitou um score duplicado.", Ansi.LYELLOW)
         return b"error: no"
 
     # all data read from submission.
@@ -979,7 +979,7 @@ async def osuSubmitModularSelector(
             replay_file = REPLAYS_PATH / f"{score.id}.osr"
             replay_file.write_bytes(replay_data)
         else:
-            log(f"{score.player} submitted a score without a replay!", Ansi.LRED)
+            log(f"{score.player} submitou um score sem um replay!", Ansi.LRED)
 
             if not score.player.restricted:
                 await score.player.restrict(

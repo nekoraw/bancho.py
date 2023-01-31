@@ -168,7 +168,7 @@ async def fetch_geoloc_web(ip: IPAddress) -> Optional[Geolocation]:
 
     async with http_client.get(url) as resp:
         if not resp or resp.status != 200:
-            log("Failed to get geoloc data: request failed.", Ansi.LRED)
+            log("Falha ao conseguir dados de geolocalização: requisição falhou.", Ansi.LRED)
             return None
 
         status, *lines = (await resp.text()).split("\n")
@@ -178,7 +178,7 @@ async def fetch_geoloc_web(ip: IPAddress) -> Optional[Geolocation]:
             if err_msg == "invalid query":
                 err_msg += f" ({url})"
 
-            log(f"Failed to get geoloc data: {err_msg}.", Ansi.LRED)
+            log(f"Falha ao conseguir dados de geolocalização: {err_msg}.", Ansi.LRED)
             return None
 
     acronym = lines[1].lower()
@@ -227,7 +227,7 @@ async def log_strange_occurrence(obj: object) -> None:
         log_file.touch(exist_ok=False)
         log_file.write_bytes(pickled_obj)
 
-        log("Logged strange occurrence to", Ansi.LYELLOW, end=" ")
+        log("Acontecimento estranho foi salvo em", Ansi.LYELLOW, end=" ")
         printc("/".join(log_file.parts[-4:]), Ansi.LBLUE)
 
         log(
@@ -326,7 +326,7 @@ async def check_for_dependency_updates() -> None:
         if latest_ver > current_ver:
             updates_available = True
             log(
-                f"{module} has an update available "
+                f"{module} possui uma atualização disponível! "
                 f"[{current_ver!r} -> {latest_ver!r}]",
                 Ansi.LMAGENTA,
             )
@@ -406,7 +406,7 @@ async def run_sql_migrations() -> None:
 
     if queries:
         log(
-            f"Updating mysql structure (v{current_ver!r} -> v{latest_ver!r}).",
+            f"Atualizando estrutura do mysql (v{current_ver!r} -> v{latest_ver!r}).",
             Ansi.LMAGENTA,
         )
 

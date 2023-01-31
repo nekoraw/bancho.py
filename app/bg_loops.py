@@ -17,7 +17,7 @@ OSU_CLIENT_MIN_PING_INTERVAL = 300000 // 1000  # defined by osu!
 
 async def initialize_housekeeping_tasks() -> None:
     """Create tasks for each housekeeping tasks."""
-    log("Initializing housekeeping tasks.", Ansi.LCYAN)
+    log("Iniciando tarefas de manutenção.", Ansi.LCYAN)
 
     loop = asyncio.get_running_loop()
 
@@ -37,7 +37,7 @@ async def _remove_expired_donation_privileges(interval: int) -> None:
     """Remove donation privileges from users with expired sessions."""
     while True:
         if app.settings.DEBUG:
-            log("Removing expired donation privileges.", Ansi.LMAGENTA)
+            log("Removendo privilégios de doação expirados.", Ansi.LMAGENTA)
 
         expired_donors = await app.state.services.database.fetch_all(
             "SELECT id FROM users "
@@ -79,7 +79,7 @@ async def _disconnect_ghosts(interval: int) -> None:
 
         for player in app.state.sessions.players:
             if current_time - player.last_recv_time > OSU_CLIENT_MIN_PING_INTERVAL:
-                log(f"Auto-dced {player}.", Ansi.LMAGENTA)
+                log(f"Desconectou {player} automaticamente.", Ansi.LMAGENTA)
                 player.logout()
 
 

@@ -38,7 +38,7 @@ class MetricsMiddleware(BaseHTTPMiddleware):
         url = f"{request.headers['host']}{request['path']}"
 
         log(f"[{request.method}] {response.status_code} {url}", col, end=" | ")
-        printc(f"Request took: {magnitude_fmt_time(time_elapsed)}", Ansi.LBLUE)
+        printc(f"Requisição demorou: {magnitude_fmt_time(time_elapsed)}", Ansi.LBLUE)
 
         response.headers["process-time"] = str(round(time_elapsed) / 1e6)
         return response
