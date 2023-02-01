@@ -826,7 +826,7 @@ async def unsilence(ctx: Context) -> Optional[str]:
 
     target = await app.state.sessions.players.from_cache_or_sql(name=ctx.args[0])
     if not target:
-        return f'"{ctx.args[0]}" não encontrado.
+        return f'"{ctx.args[0]}" não encontrado."
 
     if not target.silenced:
         return f"{target} não está silenciado."
@@ -2219,7 +2219,7 @@ async def pool_remove(ctx: Context) -> Optional[str]:
 
     pool = app.state.sessions.pools.get_by_name(name)
     if not pool:
-        return "Não foi possível achar uma mappool com esse nome.""
+        return "Não foi possível achar uma mappool com esse nome."
 
     if (mods, slot) not in pool.maps:
         return f"Não existe {mods_slot} na mappool."

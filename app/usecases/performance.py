@@ -26,8 +26,6 @@ class ScoreParams:
     nkatu: Optional[int] = None
     nmiss: Optional[int] = None
 
-from rosu_pp_py import Calculator, ScoreParams
-
 class DifficultyRating(TypedDict):
     performance: float
     star_rating: float
