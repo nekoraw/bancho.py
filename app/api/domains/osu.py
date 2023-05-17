@@ -406,10 +406,10 @@ async def lastFM(
             app.packets.notification(
                 "\n".join(
                     [
-                        "Hey!",
-                        "It appears you have hq!osu's multiaccounting tool (relife) enabled.",
-                        "This tool leaves a change in your registry that the osu! client can detect.",
-                        "Please re-install relife and disable the program to avoid any restrictions.",
+                        "Ei!",
+                        "Parece que você tem a ferramenta de multiaccount hq!osu's (relife) habilitada.",
+                        "Essa ferramente deixa uma mudança no seu registro que o client do osu! consegue detectar.",
+                        "Por favor, reinstale relife e desative o programa para evitar quaisquer restrições.",
                     ],
                 ),
             ),
@@ -474,7 +474,7 @@ async def osuSearchHandler(
         params=params,
     ) as resp:
         if resp.status != status.HTTP_200_OK:
-            return b"-1\nFailed to retrieve data from the beatmap mirror."
+            return b"-1\nFalha ao adquirir dados do mirror de beatmap."
 
         result = await resp.json()
 
@@ -853,7 +853,7 @@ async def osuSubmitModularSelector(
 
             score.player.enqueue(
                 app.packets.notification(
-                    f"You achieved #{score.rank}! ({performance})",
+                    f"Você alcançou #{score.rank} no mapa! ({performance})",
                 ),
             )
 
@@ -1841,6 +1841,9 @@ async def register_account(
     forwarded_ip: str = Header(..., alias="X-Forwarded-For"),
     real_ip: str = Header(..., alias="X-Real-IP"),
 ):
+    return
+    safe_name = make_safe_name(username)
+
     if not all((username, email, pw_plaintext)):
         return Response(
             content=b"Missing required params",
@@ -1937,4 +1940,41 @@ async def difficultyRatingHandler(request: Request):
     return RedirectResponse(
         url=f"https://osu.ppy.sh{request['path']}",
         status_code=status.HTTP_307_TEMPORARY_REDIRECT,
+    )
+
+# Redirects
+
+@router.get("/beatmaps/{beatmap_id}")
+async def beatmapset_redirect(beatmap_id: Optional[int] = None):
+    if beatmap_id == None:
+        return ORJSONResponse(
+            content={"status": f"No beatmap id specified."},
+            status_code=status.HTTP_404_NOT_FOUND,
+        )
+
+    return RedirectResponse(
+        url=f"https://{app.settings.DOMAIN}/beatmaps/{beatmap_id}",
+        status_code=status.HTTP_301_MOVED_PERMANENTLY
+    )
+
+
+@router.get("/u/{user_id}")
+async def beatmapset_redirect(user_id: Optional[int] = None):
+    if user_id == None:
+        return ORJSONResponse(
+            content={"status": f"No user id specified."},
+            status_code=status.HTTP_404_NOT_FOUND,
+        )
+
+    return RedirectResponse(
+        url=f"https://{app.settings.DOMAIN}/u/{user_id}",
+        status_code=status.HTTP_301_MOVED_PERMANENTLY
+    )
+
+
+@router.get("/")
+async def redirect_home():
+    return RedirectResponse(
+        url=f"https://{app.settings.DOMAIN}",
+        status_code=status.HTTP_301_MOVED_PERMANENTLY
     )

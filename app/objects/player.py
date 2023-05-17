@@ -115,11 +115,11 @@ class Status:
 
 # temporary menu-related stuff
 async def bot_hello(player: Player) -> None:
-    player.send_bot(f"hello {player.name}!")
+    player.send_bot(f"olá {player.name}!")
 
 
 async def notif_hello(player: Player) -> None:
-    player.enqueue(app.packets.notification(f"hello {player.name}!"))
+    player.enqueue(app.packets.notification(f"olá {player.name}!"))
 
 
 MENU2 = Menu(
@@ -290,6 +290,7 @@ class Player:
             },
         )
 
+        self.country = extras.get("country", self.geoloc["country"]["acronym"])
         self.utc_offset = extras.get("utc_offset", 0)
         self.pm_private = extras.get("pm_private", False)
         self.away_msg: Optional[str] = None
@@ -520,7 +521,7 @@ class Player:
                 self.id,
             )
             await app.state.services.redis.zrem(
-                f'bancho:leaderboard:{mode}:{self.geoloc["country"]["acronym"]}',
+                f'bancho:leaderboard:{mode}:{self.country}',
                 self.id,
             )
 
@@ -730,7 +731,7 @@ class Player:
 
             if self in self.match._refs:
                 self.match._refs.remove(self)
-                self.match.chat.send_bot(f"{self.name} removed from match referees.")
+                self.match.chat.send_bot(f"{self.name} removido dos juízes da partida.")
 
             # notify others of our deprature
             self.match.enqueue_state()
@@ -1011,7 +1012,7 @@ class Player:
         if self.restricted:
             return 0
 
-        country = self.geoloc["country"]["acronym"]
+        country = self.country
         rank = await app.state.services.redis.zrevrank(
             f"bancho:leaderboard:{mode.value}:{country}",
             str(self.id),
@@ -1020,7 +1021,7 @@ class Player:
         return rank + 1 if rank is not None else 0
 
     async def update_rank(self, mode: GameMode) -> int:
-        country = self.geoloc["country"]["acronym"]
+        country = self.country
         stats = self.stats[mode]
 
         if not self.restricted:

@@ -477,7 +477,7 @@ class Match:
         scores, didnt_submit = await self.await_submissions(was_playing)
 
         for player in didnt_submit:
-            self.chat.send_bot(f"{player} didn't submit a score (timeout: 10s).")
+            self.chat.send_bot(f"{player} não submeteu uma pontuação (timeout: 10s).")
 
         if scores:
             ffa = self.team_type in (
@@ -488,7 +488,7 @@ class Match:
             # all scores are equal, it was a tie.
             if len(scores) != 1 and len(set(scores.values())) == 1:
                 self.winners.append(None)
-                self.chat.send_bot("The point has ended in a tie!")
+                self.chat.send_bot("O ponto terminou em um empate!")
                 return None
 
             # Find the winner & increment their matchpoints.
@@ -580,12 +580,12 @@ class Match:
 
             if didnt_submit:
                 self.chat.send_bot(
-                    "If you'd like to perform a rematch, "
-                    "please use the `!mp rematch` command.",
+                    "Se você gostaria de uma revanche, "
+                    "por favor use o comando `!mp rematch`.",
                 )
 
             for line in msg:
                 self.chat.send_bot(line)
 
         else:
-            self.chat.send_bot("Scores could not be calculated.")
+            self.chat.send_bot("Não foi possível calcular as pontuações.")
