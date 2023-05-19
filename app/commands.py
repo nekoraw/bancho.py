@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import copy
-import importlib
+import importlib.metadata
 import os
 import pprint
 import random
@@ -29,6 +29,7 @@ from typing import TYPE_CHECKING
 from typing import TypedDict
 from typing import TypeVar
 from typing import Union
+from urllib.parse import urlparse
 
 import psutil
 import timeago
@@ -527,8 +528,10 @@ async def _with(ctx: Context) -> Optional[str]:
         scores=[score_args],  # calculate one score
     )
 
-    return "{msg}: {performance:.2f}pp ({star_rating:.2f}*)".format(
-        msg=" ".join(msg_fields), **result[0]  # (first score result)
+    return "{msg}: {pp:.2f}pp ({stars:.2f}*)".format(
+        msg=" ".join(msg_fields),
+        pp=result[0]["performance"]["pp"],
+        stars=result[0]["difficulty"]["stars"],  # (first score result)
     )
 
 
@@ -557,7 +560,7 @@ async def request(ctx: Context) -> Optional[str]:
 
 
 @command(Privileges.UNRESTRICTED)
-async def get_apikey(ctx: Context) -> Optional[str]:
+async def apikey(ctx: Context) -> Optional[str]:
     """Gera uma nova chave API e a designa para o jogador."""
     return "Comando desativado."
     if ctx.recipient is not app.state.sessions.bot:
@@ -573,12 +576,7 @@ async def get_apikey(ctx: Context) -> Optional[str]:
     await players_repo.update(ctx.player.id, api_key=ctx.player.api_key)
     app.state.sessions.api_keys[ctx.player.api_key] = ctx.player.id
 
-    ctx.player.enqueue(
-        app.packets.notification(
-            "Digite /savelog e clique no pop-up para um jeito fácil de copiar isto.",
-        ),
-    )
-    return f"Sua chave da API agora é: {ctx.player.api_key}"
+    return f"Chave API gerada. Copie sua chave API (deste url)[http://{ctx.player.api_key}]."
 
 
 """ Nominator commands
@@ -602,7 +600,7 @@ async def requests(ctx: Context) -> Optional[str]:
 
     l = [f"Todas requisições: {len(rows)}"]
 
-    for (map_id, player_id, dt) in rows:
+    for map_id, player_id, dt in rows:
         # find player & map for each row, and add to output.
         player = await app.state.sessions.players.from_cache_or_sql(id=player_id)
         if not player:
@@ -1254,7 +1252,8 @@ async def server(ctx: Context) -> Optional[str]:
     ram_info = " / ".join([f"{v // 1024 ** 2}MB" for v in ram_values])
 
     # current state of settings
-    mirror_url = app.settings.MIRROR_URL
+    mirror_search_url = urlparse(app.settings.MIRROR_SEARCH_ENDPOINT).netloc
+    mirror_download_url = urlparse(app.settings.MIRROR_DOWNLOAD_ENDPOINT).netloc
     using_osuapi = app.settings.OSU_API_KEY != ""
     advanced_mode = app.settings.DEVELOPER_MODE
     auto_logging = app.settings.AUTOMATICALLY_REPORT_PROBLEMS
@@ -1265,19 +1264,25 @@ async def server(ctx: Context) -> Optional[str]:
     # cmyui v1.7.3 | datadog v0.40.1 | geoip2 v4.1.0
     # maniera v1.0.0 | mysql-connector-python v8.0.23 | orjson v3.5.1
     # psutil v5.8.0 | py3rijndael v0.3.3 | uvloop v0.15.2
-    reqs = (Path.cwd() / "requirements.txt").read_text().splitlines()
+    requirements = []
+
+    for dist in importlib.metadata.distributions():
+        requirements.append(f"{dist.name} v{dist.version}")  # type: ignore
+    requirements.sort(key=lambda x: x.casefold())
+
     requirements_info = "\n".join(
-        " | ".join("{} v{}".format(*pkg.split("==")) for pkg in section)
-        for section in (reqs[i : i + 3] for i in range(0, len(reqs), 3))
+        " | ".join(section)
+        for section in (requirements[i : i + 3] for i in range(0, len(requirements), 3))
     )
 
     return "\n".join(
         (
             f"{build_str} | tempo de atividade: {seconds_readable(uptime)}",
             f"cpu(s): {cpus_info}",
-            f"memória: {ram_info}",
-            f"espelho: {mirror_url} | conexão com a osu!api: {using_osuapi}",
-            f"modo avançado: {advanced_mode} | login automático: {auto_logging}",
+            f"ram: {ram_info}",
+            f"espelho de pesquisa: {mirror_search_url} | espelho de download: {mirror_download_url}",
+            f"conexão com a osu!api: {using_osuapi}",
+            f"modo avançado: {advanced_mode} | logging automático: {auto_logging}",
             "",
             "requisitos",
             requirements_info,
@@ -2196,7 +2201,7 @@ async def pool_add(ctx: Context) -> Optional[str]:
     # add to cache
     pool.maps[(mods, slot)] = bmap
 
-    return f"{bmap.embed} adicionado a {name}."
+    return f"{bmap.embed} adicionado a {name} como {mods_slot}."
 
 
 @pool_commands.add(Privileges.TOURNEY_MANAGER, aliases=["rm", "r"], hidden=True)
@@ -2271,7 +2276,10 @@ async def pool_info(ctx: Context) -> Optional[str]:
     datetime_fmt = f"Criado em {_time} no dia {_date}"
     l = [f"{pool.id}. {pool.name}, por {pool.created_by} | {datetime_fmt}."]
 
-    for (mods, slot), bmap in pool.maps.items():
+    for (mods, slot), bmap in sorted(
+        pool.maps.items(),
+        key=lambda x: (Mods.to_string(x[0][0]), x[0][1]),
+    ):
         l.append(f"{mods!r}{slot}: {bmap.embed}")
 
     return "\n".join(l)
