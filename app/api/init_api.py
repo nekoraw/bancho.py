@@ -24,6 +24,7 @@ import app.bg_loops
 import app.settings
 import app.state
 import app.utils
+from app.api import api_router
 from app.api import domains
 from app.api import middlewares
 from app.logging import Ansi
@@ -92,7 +93,7 @@ def init_middlewares(asgi_app: BanchoAPI) -> None:
     ) -> Response:
         # if an osu! client is waiting on leaderboard data
         # and switches to another leaderboard, it will cancel
-        # the previous request mid-way, resulting in a large
+        # the previous request midway, resulting in a large
         # error in the console. this is to catch that :)
 
         try:
@@ -165,14 +166,10 @@ def init_events(asgi_app: BanchoAPI) -> None:
             app.state.services.datadog.stop()
             app.state.services.datadog.flush()
 
-        if app.state.services.geoloc_db is not None:
-            app.state.services.geoloc_db.close()
-
 
 def init_routes(asgi_app: BanchoAPI) -> None:
     """Initialize our app's route endpoints."""
     for domain in ("ppy.sh", app.settings.DOMAIN):
-
         for subdomain in ("c", "ce", "c4", "c5", "c6"):
             asgi_app.host(f"{subdomain}.{domain}", domains.cho.router)
 
@@ -180,7 +177,7 @@ def init_routes(asgi_app: BanchoAPI) -> None:
         asgi_app.host(f"b.{domain}", domains.map.router)
 
         # bancho.py's developer-facing api
-        asgi_app.host(f"api.{domain}", domains.api.router)
+        asgi_app.host(f"api.{domain}", api_router)
 
 
 def init_api() -> BanchoAPI:
