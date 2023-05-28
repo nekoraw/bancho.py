@@ -285,6 +285,16 @@ create table user_achievements
 	primary key (userid, achid)
 );
 
+create table register_keys
+(
+	reg_key char(36) not null unique,
+	user_id_created int not null,
+	user_id_used int default 0 not null,
+	creation_time int default 0 not null,
+	used boolean default false not null,
+	primary key(reg_key)
+);
+
 create table users
 (
 	id int auto_increment
@@ -320,15 +330,6 @@ create table users
 		unique (safe_name)
 );
 
-create table register_keys
-(
-	reg_key char(36) not null unique,
-	user_id_created int not null,
-	user_id_used int default 0 not null,
-	creation_time int default 0 not null,
-	used boolean default false not null,
-	primary key(reg_key)
-);
 
 insert into users (id, name, safe_name, priv, country, silence_end, email, pw_bcrypt, creation_time, latest_activity)
 values (1, 'BanchoBot', 'banchobot', 1, 'ca', 0, 'bot@akatsuki.pw',
