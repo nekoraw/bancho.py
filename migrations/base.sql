@@ -322,7 +322,7 @@ create table users
 
 create table register_keys
 (
-	reg_key char(36) not null,
+	reg_key char(36) not null unique,
 	user_id_created int not null,
 	user_id_used int default 0 not null,
 	creation_time int default 0 not null,

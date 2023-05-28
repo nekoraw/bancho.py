@@ -10,8 +10,9 @@ OSU_VERSION = re.compile(
     r"(?P<stream>beta|cuttingedge|dev|tourney)?$",
 )
 
-USERNAME = re.compile(r"^[\w \[\]-]{2,15}$")
+USERNAME = re.compile(r"^[\w \[\]-]{2,12}$")
 EMAIL = re.compile(r"^[^@\s]{1,200}@[^@\s\.]{1,30}(?:\.[^@\.\s]{2,24})+$")
+UUID = re.compile('[0-9a-f]{12}4[0-9a-f]{3}[89ab][0-9a-f]{15}\Z', re.I)
 
 TOURNEY_MATCHNAME = re.compile(
     r"^(?P<name>[a-zA-Z0-9_ ]+): "
