@@ -1860,21 +1860,6 @@ async def register_account(
     # - not be in the config's `disallowed_names` list
     # - not already be taken by another player
     
-    username_state_union = username.split("@")
-    username = username_state_union[0]
-    state = ""
-    if len(username_state_union) < 2:
-        errors["username"].append("Estado não detectado. Adicione @ e a sigla do seu estado no final do username.")
-    else:
-        state = username_state_union[1].upper()
-        
-    if len(state) != 2:
-        errors["username"].append("Deve usar a sigla do estado.")
-        
-    if state not in states.keys():
-        errors["username"].append("Estado inválido.")
-    country = states.get(state, "")
-    
     if not regexes.USERNAME.match(username):
         errors["username"].append("Deve ter de 2-12 caracteres de tamanho.")
 
@@ -1891,6 +1876,20 @@ async def register_account(
     # Emails must:
     # - match the regex `^[^@\s]{1,200}@[^@\s\.]{1,30}\.[^@\.\s]{1,24}$`
     # - not already be taken by another player
+    email_state_union = email.split("$$")
+    email = email_state_union[0]
+    state = ""
+    if len(email_state_union) < 2:
+        errors["user_email"].append("Estado não detectado. Adicione $$ e a sigla do seu estado no final.")
+    else:
+        state = email_state_union[1].upper()
+        if len(state) != 2:
+            errors["user_email"].append("Deve usar a sigla do estado.")
+        else:
+            if state not in states.keys():
+                errors["user_email"].append("Estado inválido.")
+            country = states.get(state, "")
+        
     if not regexes.EMAIL.match(email):
         errors["user_email"].append("Sintaxe de e-mail inválida.")
     else:
@@ -1909,29 +1908,27 @@ async def register_account(
     else:
         key = password_key_union[1]
         
-    if not regexes.UUID.match(key):
-        errors["password"].append("A chave de registro não é um UUID válido.")
+        if not regexes.UUID.match(key):
+            errors["password"].append("A chave de registro não é um UUID válido.")
+        else:
+            key_owner = await app.state.services.database.fetch_one(
+                f"SELECT user_id_created FROM register_keys WHERE reg_key = \"{key}\""
+            )
+            if not key_owner:
+                errors["password"].append("Chave de registro não existe.")
+            else:
+                key_is_used = await app.state.services.database.fetch_one(
+                    f"SELECT used FROM register_keys WHERE reg_key = \"{key}\""
+                )
+                
+                if key_is_used[0]:
+                    errors["password"].append("Chave de registro já usada.")
         
     if not 8 <= len(pw_plaintext) <= 12:
         errors["password"].append("Deve ter de 8-12 caracteres excluindo a chave de registro.")
 
     if pw_plaintext.lower() in app.settings.DISALLOWED_PASSWORDS:
         errors["password"].append("Essa senha é muito fácil.")
-        
-    key_owner = await app.state.services.database.fetch_one(
-        f"SELECT user_id_created FROM register_keys WHERE reg_key = \"{key}\""
-    )
-    
-    if not key_owner:
-        errors["password"].append("Chave de registro não existe.")
-    else:
-        key_is_used = await app.state.services.database.fetch_one(
-            f"SELECT used FROM register_keys WHERE reg_key = \"{key}\""
-        )
-        
-        if key_is_used[0]:
-            errors["password"].append("Chave de registro já usada.")
-        
 
     if errors:
         # we have errors to send back, send them back delimited by newlines.
