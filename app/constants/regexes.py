@@ -12,7 +12,7 @@ OSU_VERSION = re.compile(
 
 USERNAME = re.compile(r"^[\w \[\]-]{2,12}$")
 EMAIL = re.compile(r"^[^@\s]{1,200}@[^@\s\.]{1,30}(?:\.[^@\.\s]{2,24})+$")
-UUID = re.compile('[0-9a-f]{12}4[0-9a-f]{3}[89ab][0-9a-f]{15}\Z', re.I)
+UUID = re.compile(r"[a-f0-9]{8}-?[a-f0-9]{4}-?4[a-f0-9]{3}-?[89ab][a-f0-9]{3}-?[a-f0-9]{12}", re.I)
 
 TOURNEY_MATCHNAME = re.compile(
     r"^(?P<name>[a-zA-Z0-9_ ]+): "

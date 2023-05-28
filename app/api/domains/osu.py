@@ -1903,7 +1903,7 @@ async def register_account(
     # - not be in the config's `disallowed_passwords` list
     password_key_union = pw_plaintext.split("$$")
     pw_plaintext = password_key_union[0]
-    key = None
+    key = ""
     if len(password_key_union) < 2:
         errors["password"].append("Nenhuma chave de registro detectada. Adicione $$ ao fim de sua senha e cole sua chave.")
     else:
@@ -1919,17 +1919,17 @@ async def register_account(
         errors["password"].append("Essa senha é muito fácil.")
         
     key_owner = await app.state.services.database.fetch_one(
-        f"SELECT user_id_created FROM register_keys WHERE reg_key = {key}"
+        f"SELECT user_id_created FROM register_keys WHERE reg_key = \"{key}\""
     )
     
     if not key_owner:
         errors["password"].append("Chave de registro não existe.")
     else:
         key_is_used = await app.state.services.database.fetch_one(
-            f"SELECT key_is_used FROM register_keys WHERE reg_key = {key}"
+            f"SELECT used FROM register_keys WHERE reg_key = \"{key}\""
         )
         
-        if key_is_used:
+        if key_is_used[0]:
             errors["password"].append("Chave de registro já usada.")
         
 
@@ -1958,6 +1958,7 @@ async def register_account(
                 email=email,
                 pw_bcrypt=pw_bcrypt,
                 country=country,
+                registered_with_key=key
             )
 
             # add to `stats` table.
@@ -1965,7 +1966,7 @@ async def register_account(
             
         query = "UPDATE register_keys SET user_id_used :user_id_used, used = :used WHERE reg_key = :reg_key"
         params = {
-            "user_id_used": player.id,
+            "user_id_used": player["id"],
             "used": True,
             "reg_key": key
         }
