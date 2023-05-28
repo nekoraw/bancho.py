@@ -325,8 +325,9 @@ async def can_generate_key(player: Player) -> bool:
         f"SELECT creation_time FROM register_keys WHERE user_id_created = \"{player.id}\" ORDER BY creation_time DESC"
     )
     
+    now = datetime.utcnow()
     if not user_keys:
-        time_since_creation = datetime.utcnow() - datetime.fromtimestamp(player.creation_time)
+        time_since_creation = now - datetime.fromtimestamp(player.creation_time)
         if time_since_creation >= timedelta(days=14):
             query = "UPDATE users SET n_available_keys = :n_available_keys WHERE id = :id"
             params = {
@@ -339,7 +340,7 @@ async def can_generate_key(player: Player) -> bool:
             return False
     else:
         latest_key = user_keys[0]
-        time_since_last = datetime.utcnow() - datetime.fromtimestamp(latest_key)
+        time_since_last = now - datetime.fromtimestamp(latest_key)
         if time_since_creation >= timedelta(days=14):
             query = "UPDATE users SET n_available_keys = :n_available_keys WHERE id = :id"
             params = {
@@ -364,8 +365,10 @@ async def tenho_chave(ctx: Context) -> Optional[str]:
         f"SELECT creation_time FROM register_keys WHERE user_id_created = \"{player.id}\" ORDER BY creation_time DESC"
     )
     
+    now = datetime.utcnow()
+    
     if not user_keys:
-        time_since_creation = datetime.utcnow() - datetime.fromtimestamp(player.creation_time)
+        time_since_creation = now - datetime.fromtimestamp(player.creation_time)
         if time_since_creation >= timedelta(days=14):
             query = "UPDATE users SET n_available_keys = :n_available_keys WHERE id = :id"
             params = {
@@ -380,7 +383,7 @@ async def tenho_chave(ctx: Context) -> Optional[str]:
             return f"Você ainda não consegue gerar uma chave. Você será capaz ás {timefmt}."
     else:
         latest_key = user_keys[0]
-        time_since_last = datetime.utcnow() - datetime.fromtimestamp(latest_key)
+        time_since_last = now - datetime.fromtimestamp(latest_key)
         if time_since_creation >= timedelta(days=14):
             query = "UPDATE users SET n_available_keys = :n_available_keys WHERE id = :id"
             params = {
@@ -391,7 +394,7 @@ async def tenho_chave(ctx: Context) -> Optional[str]:
             return "Você possui uma chave disponível para resgate! Envie !gerar_chave para resgatá-la."
         else:
             remaining_time = timedelta(days=14) - time_since_creation
-            timefmt = datetime.strftime(remaining_time, "%d/%m/%Y %H:%M:%S %Z")
+            timefmt = datetime.strftime(now + remaining_time, "%d/%m/%Y %H:%M:%S %Z")
             return f"Você ainda não consegue gerar uma chave. Você será capaz ás {timefmt}."
     
 
