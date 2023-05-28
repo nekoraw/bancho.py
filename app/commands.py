@@ -379,7 +379,7 @@ async def tenho_chave(ctx: Context) -> Optional[str]:
             return "Você possui uma chave disponível para resgate! Envie !gerar_chave para resgatá-la."
         else:
             remaining_time = timedelta(days=14) - time_since_creation
-            timefmt = datetime.strftime(now + remaining_time, "%d/%m/%Y %H:%M %Z")
+            timefmt = datetime.strftime(now + remaining_time, "%d/%m/%Y %H:%M %z")
             return f"Você ainda não consegue gerar uma chave. Você será capaz ás {timefmt}."
     else:
         latest_key = user_keys[0]
@@ -394,7 +394,7 @@ async def tenho_chave(ctx: Context) -> Optional[str]:
             return "Você possui uma chave disponível para resgate! Envie !gerar_chave para resgatá-la."
         else:
             remaining_time = timedelta(days=14) - time_since_creation
-            timefmt = datetime.strftime(now + remaining_time, "%d/%m/%Y %H:%M %Z")
+            timefmt = datetime.strftime(now + remaining_time, "%d/%m/%Y %H:%M %z")
             return f"Você ainda não consegue gerar uma chave. Você será capaz ás {timefmt}."
     
 
