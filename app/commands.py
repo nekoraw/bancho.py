@@ -322,7 +322,7 @@ async def can_generate_key(player: Player) -> bool:
         return True
     
     user_keys = await app.state.services.database.fetch_one(
-        f"SELECT creation_time FROM register_keys ORDER BY creation_time DESC WHERE user_id_created = \"{player.id}\""
+        f"SELECT creation_time FROM register_keys WHERE user_id_created = \"{player.id}\" ORDER BY creation_time DESC"
     )
     
     if len(user_keys) <= 0:
@@ -361,7 +361,7 @@ async def tenho_chave(ctx: Context) -> Optional[str]:
         return "Você possui uma chave disponível para resgate! Envie !gerar_chave para resgatá-la."
     
     user_keys = await app.state.services.database.fetch_one(
-        f"SELECT creation_time FROM register_keys ORDER BY creation_time DESC WHERE user_id_created = \"{player.id}\""
+        f"SELECT creation_time FROM register_keys WHERE user_id_created = \"{player.id}\" ORDER BY creation_time DESC"
     )
     
     if len(user_keys) <= 0:
