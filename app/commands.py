@@ -326,8 +326,8 @@ async def can_generate_key(player: Player) -> bool:
     )
     
     now = datetime.utcnow()
-    time_since_creation = now - datetime.fromtimestamp(player.creation_time)
     if not user_keys:
+        time_since_creation = now - datetime.fromtimestamp(player.creation_time)
         if time_since_creation >= timedelta(days=14):
             query = "UPDATE users SET n_available_keys = :n_available_keys WHERE id = :id"
             params = {
@@ -341,7 +341,7 @@ async def can_generate_key(player: Player) -> bool:
     else:
         latest_key = user_keys[0]
         time_since_last = now - datetime.fromtimestamp(latest_key)
-        if time_since_creation >= timedelta(days=14):
+        if time_since_last >= timedelta(days=14):
             query = "UPDATE users SET n_available_keys = :n_available_keys WHERE id = :id"
             params = {
                 "n_available_keys": 1,
@@ -367,8 +367,8 @@ async def tenho_chave(ctx: Context) -> Optional[str]:
     
     now = datetime.utcnow()
     
-    time_since_creation = now - datetime.fromtimestamp(player.creation_time)
     if not user_keys:
+        time_since_creation = now - datetime.fromtimestamp(player.creation_time)
         if time_since_creation >= timedelta(days=14):
             query = "UPDATE users SET n_available_keys = :n_available_keys WHERE id = :id"
             params = {
@@ -384,7 +384,7 @@ async def tenho_chave(ctx: Context) -> Optional[str]:
     else:
         latest_key = user_keys[0]
         time_since_last = now - datetime.fromtimestamp(latest_key)
-        if time_since_creation >= timedelta(days=14):
+        if time_since_last >= timedelta(days=14):
             query = "UPDATE users SET n_available_keys = :n_available_keys WHERE id = :id"
             params = {
                 "n_available_keys": 1,
@@ -393,7 +393,7 @@ async def tenho_chave(ctx: Context) -> Optional[str]:
             await app.state.services.database.execute(query, params)
             return "Você possui uma chave disponível para resgate! Envie !gerar_chave para resgatá-la."
         else:
-            remaining_time = timedelta(days=14) - time_since_creation
+            remaining_time = timedelta(days=14) - time_since_last
             timefmt = datetime.strftime(now + remaining_time, "%d/%m/%Y %H:%M")
             return f"Você ainda não consegue gerar uma chave. Você será capaz ás {timefmt} UTC-0."
     
