@@ -402,12 +402,12 @@ async def tenho_chave(ctx: Context) -> Optional[str]:
 async def gerar_chave(ctx: Context) -> Optional[str]:
     """Gera uma chave para convidar um player terceiro ao game."""
     player = ctx.player
-    if player.n_keys == 0:
-        if not can_generate_key(player):
+    if player.n_keys < 1:
+        if not (await can_generate_key(player)):
             return "Você não possui uma chave disponível para ser obtida. Envie !tenho_chave para verificar quando sua próxima chave estará disponível."
         
     new_key = str(uuid.uuid4())
-    query = "INSERT INTO register_keys (reg_key, user_id_created, creation_time) VALUES :reg_key, :user_id_created, UNIX_TIMESTAMP()"
+    query = "INSERT INTO register_keys (reg_key, user_id_created, creation_time) VALUES ():reg_key, :user_id_created, UNIX_TIMESTAMP())"
     params = {
         "reg_key": new_key,
         "user_id_created": player.id
