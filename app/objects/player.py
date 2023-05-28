@@ -331,6 +331,7 @@ class Player:
         self.api_key = extras.get("api_key", None)
         self.n_keys = extras.get("n_available_keys", 0)
         self.registered_with_key = extras.get("registered_with_key", "")
+        self.creation_time = extras.get("creation_time", "")
 
         # packet queue
         self._queue = bytearray()
