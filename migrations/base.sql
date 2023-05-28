@@ -309,7 +309,7 @@ create table users
 	custom_badge_icon varchar(64) null,
 	userpage_content varchar(2048) charset utf8 null,
 	api_key char(36) null,
-	foreign key (registered_with_key) references register_keys(reg_key)
+	foreign key (registered_with_key) references register_keys(reg_key),
 	constraint users_api_key_uindex
 		unique (api_key),
 	constraint users_email_uindex
@@ -326,7 +326,7 @@ create table register_keys
 	user_id_created int not null,
 	user_id_used int default 0 not null,
 	creation_time int default 0 not null,
-	used bool default false not null,
+	used boolean default false not null,
 	primary key(reg_key)
 );
 
