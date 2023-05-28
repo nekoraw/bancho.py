@@ -1964,7 +1964,7 @@ async def register_account(
             # add to `stats` table.
             await stats_repo.create_all_modes(player_id=player["id"])
             
-        query = "UPDATE register_keys SET user_id_used :user_id_used, used = :used WHERE reg_key = :reg_key"
+        query = "UPDATE register_keys SET user_id_used = :user_id_used, used = :used WHERE reg_key = :reg_key"
         params = {
             "user_id_used": player["id"],
             "used": True,
