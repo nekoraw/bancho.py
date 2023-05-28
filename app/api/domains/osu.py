@@ -1842,7 +1842,7 @@ async def register_account(
     forwarded_ip: str = Header(..., alias="X-Forwarded-For"),
     real_ip: str = Header(..., alias="X-Real-IP"),
 ):
-    safe_name = make_safe_name(username)
+    safe_name = app.utils.make_safe_name(username)
 
     if not all((username, email, pw_plaintext)):
         return Response(
