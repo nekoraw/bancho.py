@@ -325,7 +325,7 @@ async def can_generate_key(player: Player) -> bool:
         f"SELECT creation_time FROM register_keys WHERE user_id_created = \"{player.id}\" ORDER BY creation_time DESC"
     )
     
-    if not user_keys <= 0:
+    if not user_keys:
         time_since_creation = datetime.utcnow() - datetime.fromtimestamp(player.creation_time)
         if time_since_creation >= timedelta(days=14):
             query = "UPDATE users SET n_available_keys = :n_available_keys WHERE id = :id"
@@ -364,7 +364,7 @@ async def tenho_chave(ctx: Context) -> Optional[str]:
         f"SELECT creation_time FROM register_keys WHERE user_id_created = \"{player.id}\" ORDER BY creation_time DESC"
     )
     
-    if not user_keys <= 0:
+    if not user_keys:
         time_since_creation = datetime.utcnow() - datetime.fromtimestamp(player.creation_time)
         if time_since_creation >= timedelta(days=14):
             query = "UPDATE users SET n_available_keys = :n_available_keys WHERE id = :id"
