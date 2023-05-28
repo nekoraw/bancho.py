@@ -379,8 +379,8 @@ async def tenho_chave(ctx: Context) -> Optional[str]:
             return "Você possui uma chave disponível para resgate! Envie !gerar_chave para resgatá-la."
         else:
             remaining_time = timedelta(days=14) - time_since_creation
-            timefmt = datetime.strftime(now + remaining_time, "%d/%m/%Y %H:%M %z")
-            return f"Você ainda não consegue gerar uma chave. Você será capaz ás {timefmt}."
+            timefmt = datetime.strftime(now + remaining_time, "%d/%m/%Y %H:%M")
+            return f"Você ainda não consegue gerar uma chave. Você será capaz ás {timefmt} UTC-0."
     else:
         latest_key = user_keys[0]
         time_since_last = now - datetime.fromtimestamp(latest_key)
@@ -394,8 +394,8 @@ async def tenho_chave(ctx: Context) -> Optional[str]:
             return "Você possui uma chave disponível para resgate! Envie !gerar_chave para resgatá-la."
         else:
             remaining_time = timedelta(days=14) - time_since_creation
-            timefmt = datetime.strftime(now + remaining_time, "%d/%m/%Y %H:%M %z")
-            return f"Você ainda não consegue gerar uma chave. Você será capaz ás {timefmt}."
+            timefmt = datetime.strftime(now + remaining_time, "%d/%m/%Y %H:%M")
+            return f"Você ainda não consegue gerar uma chave. Você será capaz ás {timefmt} UTC-0."
     
 
 @command(Privileges.UNRESTRICTED, aliases=["generate_key"])
