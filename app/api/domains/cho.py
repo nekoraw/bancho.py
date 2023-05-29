@@ -679,7 +679,7 @@ async def login(
             return {
                 "osu_token": "incorrect-password",
                 "response_body": (
-                    app.packets.notification(f"{BASE_DOMAIN}: Senha incorreta")
+                    app.packets.notification(f"{BASE_DOMAIN}: Faça login novamente. Caso não funcionar, suas credenciais estão incorretas.")
                     + app.packets.user_id(-1)
                 ),
             }
@@ -688,7 +688,7 @@ async def login(
             return {
                 "osu_token": "incorrect-password",
                 "response_body": (
-                    app.packets.notification(f"{BASE_DOMAIN}: Senha incorreta")
+                    app.packets.notification(f"{BASE_DOMAIN}: Faça login novamente. Caso não funcionar, suas credenciais estão incorretas.")
                     + app.packets.user_id(-1)
                 ),
             }
