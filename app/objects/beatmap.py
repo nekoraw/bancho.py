@@ -781,7 +781,7 @@ class BeatmapSet:
                     "last_update": bmap.last_update,
                     "total_length": bmap.total_length,
                     "max_combo": bmap.max_combo,
-                    "status": bmap.status,
+                    "status": bmap.status if bmap.status != 0 else 2,
                     "frozen": bmap.frozen,
                     "plays": bmap.plays,
                     "passes": bmap.passes,

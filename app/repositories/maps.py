@@ -287,7 +287,7 @@ async def update(
         "id": id,
         "server": server,
         "set_id": set_id,
-        "status": status,
+        "status": status if status != 0 else 2,
         "md5": md5,
         "artist": artist,
         "title": title,
