@@ -1876,19 +1876,21 @@ async def register_account(
     # Emails must:
     # - match the regex `^[^@\s]{1,200}@[^@\s\.]{1,30}\.[^@\.\s]{1,24}$`
     # - not already be taken by another player
-    email_state_union = email.split("$$")
-    email = email_state_union[0]
-    state = ""
-    if len(email_state_union) < 2:
-        errors["user_email"].append("Estado não detectado. Adicione $$ e a sigla do seu estado no final.")
-    else:
-        state = email_state_union[1].upper()
-        if len(state) != 2:
-            errors["user_email"].append("Deve usar a sigla do estado.")
+    country = "XX"
+    if app.settings.KEY_BASED_LOGIN:
+        email_state_union = email.split("$$")
+        email = email_state_union[0]
+        state = ""
+        if len(email_state_union) < 2:
+            errors["user_email"].append("Estado não detectado. Adicione $$ e a sigla do seu estado no final.")
         else:
-            if state not in states.keys():
-                errors["user_email"].append("Estado inválido.")
-            country = states.get(state, "")
+            state = email_state_union[1].upper()
+            if len(state) != 2:
+                errors["user_email"].append("Deve usar a sigla do estado.")
+            else:
+                if state not in states.keys():
+                    errors["user_email"].append("Estado inválido.")
+                country = states.get(state, "")
         
     if not regexes.EMAIL.match(email):
         errors["user_email"].append("Sintaxe de e-mail inválida.")
@@ -1900,29 +1902,30 @@ async def register_account(
     # - be within 8-32 characters in length
     # - have more than 3 unique characters
     # - not be in the config's `disallowed_passwords` list
-    password_key_union = pw_plaintext.split("$$")
-    pw_plaintext = password_key_union[0]
     key = ""
-    if len(password_key_union) < 2:
-        errors["password"].append("Nenhuma chave de registro detectada. Adicione $$ ao fim de sua senha e cole sua chave.")
-    else:
-        key = password_key_union[1]
-        
-        if not regexes.UUID.match(key):
-            errors["password"].append("A chave de registro não é um UUID válido.")
+    if app.settings.KEY_BASED_LOGIN:
+        password_key_union = pw_plaintext.split("$$")
+        pw_plaintext = password_key_union[0]
+        if len(password_key_union) < 2:
+            errors["password"].append("Nenhuma chave de registro detectada. Adicione $$ ao fim de sua senha e cole sua chave.")
         else:
-            key_owner = await app.state.services.database.fetch_one(
-                f"SELECT user_id_created FROM register_keys WHERE reg_key = \"{key}\""
-            )
-            if not key_owner:
-                errors["password"].append("Chave de registro não existe.")
+            key = password_key_union[1]
+            
+            if not regexes.UUID.match(key):
+                errors["password"].append("A chave de registro não é um UUID válido.")
             else:
-                key_is_used = await app.state.services.database.fetch_one(
-                    f"SELECT used FROM register_keys WHERE reg_key = \"{key}\""
+                key_owner = await app.state.services.database.fetch_one(
+                    f"SELECT user_id_created FROM register_keys WHERE reg_key = \"{key}\""
                 )
-                
-                if key_is_used[0]:
-                    errors["password"].append("Chave de registro já usada.")
+                if not key_owner:
+                    errors["password"].append("Chave de registro não existe.")
+                else:
+                    key_is_used = await app.state.services.database.fetch_one(
+                        f"SELECT used FROM register_keys WHERE reg_key = \"{key}\""
+                    )
+                    
+                    if key_is_used[0]:
+                        errors["password"].append("Chave de registro já usada.")
         
     if not 8 <= len(pw_plaintext) <= 12:
         errors["password"].append("Deve ter de 8-12 caracteres excluindo a chave de registro.")
@@ -1961,13 +1964,14 @@ async def register_account(
             # add to `stats` table.
             await stats_repo.create_all_modes(player_id=player["id"])
             
-        query = "UPDATE register_keys SET user_id_used = :user_id_used, used = :used WHERE reg_key = :reg_key"
-        params = {
-            "user_id_used": player["id"],
-            "used": True,
-            "reg_key": key
-        }
-        await app.state.services.database.execute(query, params)
+        if app.settings.KEY_BASED_LOGIN:
+            query = "UPDATE register_keys SET user_id_used = :user_id_used, used = :used WHERE reg_key = :reg_key"
+            params = {
+                "user_id_used": player["id"],
+                "used": True,
+                "reg_key": key
+            }
+            await app.state.services.database.execute(query, params)
 
         if app.state.services.datadog:
             app.state.services.datadog.increment("bancho.registrations")
