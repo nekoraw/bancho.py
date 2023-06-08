@@ -484,6 +484,8 @@ class Beatmap:
         if not getattr(self, "frozen", False):
             osuapi_status = int(osuapi_resp["approved"])
             self.status = RankedStatus.from_osuapi(osuapi_status)
+            if self.status == RankedStatus.Pending:
+                self.status = RankedStatus.Approved
 
         self.mode = GameMode(int(osuapi_resp["mode"]))
 
@@ -781,7 +783,7 @@ class BeatmapSet:
                     "last_update": bmap.last_update,
                     "total_length": bmap.total_length,
                     "max_combo": bmap.max_combo,
-                    "status": bmap.status if bmap.status != 0 else 2,
+                    "status": bmap.status if bmap.status != 0 else 3,
                     "frozen": bmap.frozen,
                     "plays": bmap.plays,
                     "passes": bmap.passes,
