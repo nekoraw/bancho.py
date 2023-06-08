@@ -450,7 +450,7 @@ WELCOME_MSG = "\n".join(
 
 RESTRICTED_MSG = (
     "Sua conta está atualmente no modo restrito. "
-    "Caso você ache que isso é um erro, ou esperou um período "
+    "Caso você ache que isso é um erro, ou esperou um período maior"
     "do que 3 meses, você pode se justificar com o formulário no site."
 )
 
