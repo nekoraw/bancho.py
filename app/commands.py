@@ -1019,7 +1019,7 @@ async def restrict(ctx: Context) -> Optional[str]:
         return f"{target} já está restrito!"
     
     if target.id == 1:
-        return f"Você não pode banir o fubicabot."
+        return f"Você não pode banir o (Mamiya Takuji)[https://files.catbox.moe/zjz9qo.png]."
 
     reason = " ".join(ctx.args[1:])
 

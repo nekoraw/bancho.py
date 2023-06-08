@@ -332,7 +332,7 @@ create table users
 
 
 insert into users (id, name, safe_name, priv, country, silence_end, email, pw_bcrypt, creation_time, latest_activity)
-values (1, 'BanchoBot', 'banchobot', 1, 'ca', 0, 'bot@akatsuki.pw',
+values (1, 'Mamiya Takuji', 'mamiya_takuji', 1, 'S2', 0, 'bot@nkrw.dev',
         '_______________________my_cool_bcrypt_______________________', UNIX_TIMESTAMP(), UNIX_TIMESTAMP());
 
 insert into register_keys(reg_key, user_id_created, creation_time) values ("7ee7ba5e-05ab-456a-b500-c9127a5faa42", 1, UNIX_TIMESTAMP());
