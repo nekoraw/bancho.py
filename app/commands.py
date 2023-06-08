@@ -1040,16 +1040,16 @@ async def restrict(ctx: Context) -> Optional[str]:
     if not u:
         return f"{target} foi restrito."        
     
-    if u.restricted or u.id == 1:
-        return f"{target} foi restrito."
-    
-    reason = f"Banido por convidar {target}, que foi banido por: {reason}."
-    await u.restrict(admin=ctx.player, reason=reason)
-    
-    if u.online:
-        u.logout()
+    if not u.restricted:
+        reason = f"Banido por convidar {target}, que foi banido por: {reason}."
+        await u.restrict(admin=ctx.player, reason=reason)
         
-    return f"{target} foi restrito, e {u} também foi por ter convidado."
+        if u.online:
+            u.logout()
+        
+        return f"{target} foi restrito, e {u} também foi por ter convidado."
+    
+    return f"{target} foi restrito."
 
 
 @command(Privileges.ADMINISTRATOR, hidden=True)
