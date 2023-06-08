@@ -49,6 +49,7 @@ import app.settings
 import app.state
 import app.utils
 from app.constants import regexes
+from app.constants.states import states
 from app.constants.clientflags import LastFMFlags
 from app.constants.gamemodes import GameMode
 from app.constants.mods import Mods
@@ -1841,8 +1842,7 @@ async def register_account(
     forwarded_ip: str = Header(..., alias="X-Forwarded-For"),
     real_ip: str = Header(..., alias="X-Real-IP"),
 ):
-    return
-    safe_name = make_safe_name(username)
+    safe_name = app.utils.make_safe_name(username)
 
     if not all((username, email, pw_plaintext)):
         return Response(
@@ -1855,44 +1855,83 @@ async def register_account(
     errors: Mapping[str, list[str]] = defaultdict(list)
 
     # Usernames must:
-    # - be within 2-15 characters in length
+    # - be within 2-12 characters in length
     # - not contain both ' ' and '_', one is fine
     # - not be in the config's `disallowed_names` list
     # - not already be taken by another player
+    
     if not regexes.USERNAME.match(username):
-        errors["username"].append("Must be 2-15 characters in length.")
+        errors["username"].append("Deve ter de 2-12 caracteres de tamanho.")
 
     if "_" in username and " " in username:
-        errors["username"].append('May contain "_" and " ", but not both.')
+        errors["username"].append('Pode ter "_" e " ", mas não ambos.')
 
     if username in app.settings.DISALLOWED_NAMES:
-        errors["username"].append("Disallowed username; pick another.")
+        errors["username"].append("Nome de usuário proibido; escolha outro.")
 
     if "username" not in errors:
         if await players_repo.fetch_one(name=username):
-            errors["username"].append("Username already taken by another player.")
+            errors["username"].append("Nome de usuário já usado por outro jogador.")
 
     # Emails must:
     # - match the regex `^[^@\s]{1,200}@[^@\s\.]{1,30}\.[^@\.\s]{1,24}$`
     # - not already be taken by another player
+    country = "XX"
+    if app.settings.KEY_BASED_LOGIN:
+        email_state_union = email.split("$$")
+        email = email_state_union[0]
+        state = ""
+        if len(email_state_union) < 2:
+            errors["user_email"].append("Estado não detectado. Adicione $$ e a sigla do seu estado no final.")
+        else:
+            state = email_state_union[1].upper()
+            if len(state) != 2:
+                errors["user_email"].append("Deve usar a sigla do estado.")
+            else:
+                if state not in states.keys():
+                    errors["user_email"].append("Estado inválido.")
+                country = states.get(state, "")
+        
     if not regexes.EMAIL.match(email):
-        errors["user_email"].append("Invalid email syntax.")
+        errors["user_email"].append("Sintaxe de e-mail inválida.")
     else:
         if await players_repo.fetch_one(email=email):
-            errors["user_email"].append("Email already taken by another player.")
+            errors["user_email"].append("E-mail já usado por outro jogador.")
 
     # Passwords must:
     # - be within 8-32 characters in length
     # - have more than 3 unique characters
     # - not be in the config's `disallowed_passwords` list
-    if not 8 <= len(pw_plaintext) <= 32:
-        errors["password"].append("Must be 8-32 characters in length.")
-
-    if len(set(pw_plaintext)) <= 3:
-        errors["password"].append("Must have more than 3 unique characters.")
+    key = ""
+    if app.settings.KEY_BASED_LOGIN:
+        password_key_union = pw_plaintext.split("$$")
+        pw_plaintext = password_key_union[0]
+        if len(password_key_union) < 2:
+            errors["password"].append("Nenhuma chave de registro detectada. Adicione $$ ao fim de sua senha e cole sua chave.")
+        else:
+            key = password_key_union[1]
+            
+            if not regexes.UUID.match(key):
+                errors["password"].append("A chave de registro não é um UUID válido.")
+            else:
+                key_owner = await app.state.services.database.fetch_one(
+                    f"SELECT user_id_created FROM register_keys WHERE reg_key = \"{key}\""
+                )
+                if not key_owner:
+                    errors["password"].append("Chave de registro não existe.")
+                else:
+                    key_is_used = await app.state.services.database.fetch_one(
+                        f"SELECT used FROM register_keys WHERE reg_key = \"{key}\""
+                    )
+                    
+                    if key_is_used[0]:
+                        errors["password"].append("Chave de registro já usada.")
+        
+    if not 8 <= len(pw_plaintext) <= 12:
+        errors["password"].append("Deve ter de 8-12 caracteres excluindo a chave de registro.")
 
     if pw_plaintext.lower() in app.settings.DISALLOWED_PASSWORDS:
-        errors["password"].append("That password was deemed too simple.")
+        errors["password"].append("Essa senha é muito fácil.")
 
     if errors:
         # we have errors to send back, send them back delimited by newlines.
@@ -1911,9 +1950,6 @@ async def register_account(
         pw_bcrypt = bcrypt.hashpw(pw_md5, bcrypt.gensalt())
         app.state.cache.bcrypt[pw_bcrypt] = pw_md5  # cache result for login
 
-        ip = app.state.services.ip_resolver.get_ip(request.headers)
-
-        geoloc = await app.state.services.fetch_geoloc(ip, request.headers)
 
         async with app.state.services.database.transaction():
             # add to `users` table.
@@ -1921,11 +1957,21 @@ async def register_account(
                 name=username,
                 email=email,
                 pw_bcrypt=pw_bcrypt,
-                country=geoloc["country"]["acronym"],
+                country=country,
+                registered_with_key=key
             )
 
             # add to `stats` table.
             await stats_repo.create_all_modes(player_id=player["id"])
+            
+        if app.settings.KEY_BASED_LOGIN:
+            query = "UPDATE register_keys SET user_id_used = :user_id_used, used = :used WHERE reg_key = :reg_key"
+            params = {
+                "user_id_used": player["id"],
+                "used": True,
+                "reg_key": key
+            }
+            await app.state.services.database.execute(query, params)
 
         if app.state.services.datadog:
             app.state.services.datadog.increment("bancho.registrations")

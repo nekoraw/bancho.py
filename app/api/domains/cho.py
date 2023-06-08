@@ -679,7 +679,7 @@ async def login(
             return {
                 "osu_token": "incorrect-password",
                 "response_body": (
-                    app.packets.notification(f"{BASE_DOMAIN}: Senha incorreta")
+                    app.packets.notification(f"{BASE_DOMAIN}: Faça login novamente. Caso não funcionar, suas credenciais estão incorretas.")
                     + app.packets.user_id(-1)
                 ),
             }
@@ -688,7 +688,7 @@ async def login(
             return {
                 "osu_token": "incorrect-password",
                 "response_body": (
-                    app.packets.notification(f"{BASE_DOMAIN}: Senha incorreta")
+                    app.packets.notification(f"{BASE_DOMAIN}: Faça login novamente. Caso não funcionar, suas credenciais estão incorretas.")
                     + app.packets.user_id(-1)
                 ),
             }
@@ -765,7 +765,7 @@ async def login(
                     "osu_token": "contact-staff",
                     "response_body": (
                         app.packets.notification(
-                            "Por favor contate a staff diretamente para criar a sua conta.",
+                            "Multi-contas detectado. Não será possível efetuar login no fubi.ca.",
                         )
                         + app.packets.user_id(-1)
                     ),
@@ -961,8 +961,8 @@ async def login(
                     | Privileges.DONATOR
                     | Privileges.ALUMNI,
                 )
-            elif p.id >= 3:
-                await p.add_privs(Privileges.SUPPORTER)
+            elif player.id >= 3:
+                await player.add_privs(Privileges.SUPPORTER)
 
             data += app.packets.send_message(
                 sender=app.state.sessions.bot.name,

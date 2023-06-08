@@ -13,7 +13,7 @@ import traceback
 import uuid
 from collections import Counter
 from dataclasses import dataclass
-from datetime import datetime
+from datetime import datetime, timedelta
 from functools import wraps
 from pathlib import Path
 from time import perf_counter_ns as clock_ns
@@ -315,6 +315,113 @@ async def maplink(ctx: Context) -> Optional[str]:
     # gatari.pw & nerina.pw are pretty much the only
     # reliable mirrors I know of? perhaps beatconnect
     return f"[https://osu.gatari.pw/d/{bmap.set_id} {bmap.full_name}]"
+
+
+async def can_generate_key(player: Player) -> bool:
+    if player.n_keys == 1:
+        return True
+    
+    user_keys = await app.state.services.database.fetch_one(
+        f"SELECT creation_time FROM register_keys WHERE user_id_created = \"{player.id}\" ORDER BY creation_time DESC"
+    )
+    
+    now = datetime.utcnow()
+    if not user_keys:
+        time_since_creation = now - datetime.fromtimestamp(player.creation_time)
+        if time_since_creation >= timedelta(days=14):
+            query = "UPDATE users SET n_available_keys = :n_available_keys WHERE id = :id"
+            params = {
+                "n_available_keys": 1,
+                "id": player.id
+            }
+            await app.state.services.database.execute(query, params)
+            return True
+        else:
+            return False
+    else:
+        latest_key = user_keys[0]
+        time_since_last = now - datetime.fromtimestamp(latest_key)
+        if time_since_last >= timedelta(days=14):
+            query = "UPDATE users SET n_available_keys = :n_available_keys WHERE id = :id"
+            params = {
+                "n_available_keys": 1,
+                "id": player.id
+            }
+            await app.state.services.database.execute(query, params)
+            return True
+        else:
+            return False
+
+
+@command(Privileges.UNRESTRICTED, aliases=["available_key"])
+async def tenho_chave(ctx: Context) -> Optional[str]:
+    """Verifica se o usuário possui uma chave de registro disponível."""
+    player = ctx.player
+    
+    if player.n_keys == 1:
+        return "Você possui uma chave disponível para resgate! Envie !gerar_chave para resgatá-la."
+    
+    user_keys = await app.state.services.database.fetch_one(
+        f"SELECT creation_time FROM register_keys WHERE user_id_created = \"{player.id}\" ORDER BY creation_time DESC"
+    )
+    
+    now = datetime.utcnow()
+    
+    if not user_keys:
+        time_since_creation = now - datetime.fromtimestamp(player.creation_time)
+        if time_since_creation >= timedelta(days=14):
+            query = "UPDATE users SET n_available_keys = :n_available_keys WHERE id = :id"
+            params = {
+                "n_available_keys": 1,
+                "id": player.id
+            }
+            await app.state.services.database.execute(query, params)
+            return "Você possui uma chave disponível para resgate! Envie !gerar_chave para resgatá-la."
+        else:
+            remaining_time = timedelta(days=14) - time_since_creation
+            timefmt = datetime.strftime(now + remaining_time, "%d/%m/%Y %H:%M")
+            return f"Você ainda não consegue gerar uma chave. Você será capaz ás {timefmt} UTC-0."
+    else:
+        latest_key = user_keys[0]
+        time_since_last = now - datetime.fromtimestamp(latest_key)
+        if time_since_last >= timedelta(days=14):
+            query = "UPDATE users SET n_available_keys = :n_available_keys WHERE id = :id"
+            params = {
+                "n_available_keys": 1,
+                "id": player.id
+            }
+            await app.state.services.database.execute(query, params)
+            return "Você possui uma chave disponível para resgate! Envie !gerar_chave para resgatá-la."
+        else:
+            remaining_time = timedelta(days=14) - time_since_last
+            timefmt = datetime.strftime(now + remaining_time, "%d/%m/%Y %H:%M")
+            return f"Você ainda não consegue gerar uma chave. Você será capaz ás {timefmt} UTC-0."
+    
+
+@command(Privileges.UNRESTRICTED, aliases=["generate_key"])
+async def gerar_chave(ctx: Context) -> Optional[str]:
+    """Gera uma chave para convidar um player terceiro ao game."""
+    player = ctx.player
+    if player.n_keys < 1:
+        if not (await can_generate_key(player)):
+            return "Você não possui uma chave disponível para ser obtida. Envie !tenho_chave para verificar quando sua próxima chave estará disponível."
+        
+    new_key = str(uuid.uuid4())
+    query = "INSERT INTO register_keys (reg_key, user_id_created, creation_time) VALUES (:reg_key, :user_id_created, UNIX_TIMESTAMP())"
+    params = {
+        "reg_key": new_key,
+        "user_id_created": player.id
+    }
+    await app.state.services.database.execute(query, params)
+    
+    query = "UPDATE users SET n_available_keys = :n_available_keys WHERE id = :id"
+    params = {
+        "n_available_keys": 0,
+        "id": player.id
+    }
+    await app.state.services.database.execute(query, params)
+    
+    return f"Sua chave é {new_key}. Guarde-a em um lugar seguro, pois essa é a única vez que vc pode ver ela."
 
 
 @command(Privileges.UNRESTRICTED, aliases=["last", "r"])
@@ -896,7 +1003,7 @@ async def user(ctx: Context) -> Optional[str]:
 
 @command(Privileges.ADMINISTRATOR, hidden=True)
 async def restrict(ctx: Context) -> Optional[str]:
-    """Restringe a conta de um jogador especificado, com um motivo."""
+    """Restringe a conta de um jogador especificado, e quem o convidou, com um motivo."""
     if len(ctx.args) < 2:
         return "Sintaxe inválida: !restrict <nome> <motivo>"
 
@@ -910,6 +1017,9 @@ async def restrict(ctx: Context) -> Optional[str]:
 
     if target.restricted:
         return f"{target} já está restrito!"
+    
+    if target.id == 1:
+        return f"Você não pode banir o fubicabot."
 
     reason = " ".join(ctx.args[1:])
 
@@ -921,8 +1031,25 @@ async def restrict(ctx: Context) -> Optional[str]:
     # refresh their client state
     if target.online:
         target.logout()
-
-    return f"{target} foi restrito."
+        
+    key_owner = await app.state.services.database.fetch_one(
+        f"SELECT user_id_created FROM register_keys WHERE user_id_used = {target.id}"
+    )
+    
+    u = await app.state.sessions.players.from_cache_or_sql(id=dict(key_owner).get("user_id_created"))
+    if not u:
+        return f"{target} foi restrito."        
+    
+    if u.restricted or u.id == 1:
+        return f"{target} foi restrito."
+    
+    reason = f"Banido por convidar {target}, que foi banido por: {reason}."
+    await u.restrict(admin=ctx.player, reason=reason)
+    
+    if u.online:
+        u.logout()
+        
+    return f"{target} foi restrito, e {u} também foi por ter convidado."
 
 
 @command(Privileges.ADMINISTRATOR, hidden=True)

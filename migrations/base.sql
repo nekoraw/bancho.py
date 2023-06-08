@@ -285,6 +285,16 @@ create table user_achievements
 	primary key (userid, achid)
 );
 
+create table register_keys
+(
+	reg_key char(36) not null unique,
+	user_id_created int not null,
+	user_id_used int default 0 not null,
+	creation_time int default 0 not null,
+	used boolean default false not null,
+	primary key(reg_key)
+);
+
 create table users
 (
 	id int auto_increment
@@ -300,6 +310,8 @@ create table users
 	creation_time int default 0 not null,
 	latest_activity int default 0 not null,
 	clan_id int default 0 not null,
+	n_available_keys int default 0 not null,
+	registered_with_key char(36) default null,
 	clan_priv tinyint(1) default 0 not null,
 	preferred_mode int default 0 not null,
 	play_style int default 0 not null,
@@ -307,6 +319,7 @@ create table users
 	custom_badge_icon varchar(64) null,
 	userpage_content varchar(2048) charset utf8 null,
 	api_key char(36) null,
+	foreign key (registered_with_key) references register_keys(reg_key),
 	constraint users_api_key_uindex
 		unique (api_key),
 	constraint users_email_uindex
@@ -317,9 +330,12 @@ create table users
 		unique (safe_name)
 );
 
+
 insert into users (id, name, safe_name, priv, country, silence_end, email, pw_bcrypt, creation_time, latest_activity)
 values (1, 'BanchoBot', 'banchobot', 1, 'ca', 0, 'bot@akatsuki.pw',
         '_______________________my_cool_bcrypt_______________________', UNIX_TIMESTAMP(), UNIX_TIMESTAMP());
+
+insert into register_keys(reg_key, user_id_created, creation_time) values ("7ee7ba5e-05ab-456a-b500-c9127a5faa42", 1, UNIX_TIMESTAMP());
 
 INSERT INTO stats (id, mode) VALUES (1, 0); # vn!std
 INSERT INTO stats (id, mode) VALUES (1, 1); # vn!taiko
