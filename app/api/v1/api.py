@@ -30,6 +30,7 @@ from app.repositories import players as players_repo
 from app.repositories import scores as scores_repo
 from app.repositories import stats as stats_repo
 from app.usecases.performance import ScoreParams
+from app.objects.beatmap import BeatmapSet
 
 AVATARS_PATH = SystemPath.cwd() / ".data/avatars"
 BEATMAPS_PATH = SystemPath.cwd() / ".data/osu"
