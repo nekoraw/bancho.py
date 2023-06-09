@@ -443,7 +443,7 @@ WELCOME_MSG = "\n".join(
     (
         f"Bem-vindo a {BASE_DOMAIN}.",
         "Para ver a lista de comandos, use !help.",
-        "Nós temos um (Discord)[https://discord.gg/832zD9FfYH] público!",
+        "Nós temos um (Discord)[https://discord.gg/nmu4hYWE4n] público!",
         "Aproveite o servidor!",
     ),
 )

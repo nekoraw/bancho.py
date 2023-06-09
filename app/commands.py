@@ -402,9 +402,9 @@ async def tenho_chave(ctx: Context) -> Optional[str]:
 async def gerar_chave(ctx: Context) -> Optional[str]:
     """Gera uma chave para convidar um player terceiro ao game."""
     player = ctx.player
-    if player.n_keys < 1:
-        if not (await can_generate_key(player)):
-            return "Você não possui uma chave disponível para ser obtida. Envie !tenho_chave para verificar quando sua próxima chave estará disponível."
+    # if player.n_keys < 1:
+    #     if not (await can_generate_key(player)):
+    #         return "Você não possui uma chave disponível para ser obtida. Envie !tenho_chave para verificar quando sua próxima chave estará disponível."
         
     new_key = str(uuid.uuid4())
     query = "INSERT INTO register_keys (reg_key, user_id_created, creation_time) VALUES (:reg_key, :user_id_created, UNIX_TIMESTAMP())"
@@ -1178,7 +1178,7 @@ async def recalc(ctx: Context) -> Optional[str]:
     """Recalculate pp for a given map, or all maps."""
     return (
         "Please use tools/recalc.py instead.\n"
-        "If you need any support, join our Discord @ https://discord.gg/ShEQgUx."
+        "If you need any support, join our Discord @ https://discord.gg/nmu4hYWE4n."
     )
 
 
