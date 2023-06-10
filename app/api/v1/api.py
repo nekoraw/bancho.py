@@ -600,6 +600,7 @@ async def api_get_map_info(
 async def api_get_map_scores(
     scope: Literal["recent", "best"],
     sort: Optional[Literal["max_combo", "pp", "acc", "score", "play_time"]] = None,
+    sort_order: Optional[Literal["ascending", "descending"]] = None,
     map_id: Optional[int] = Query(None, alias="id", ge=0, le=2_147_483_647),
     map_md5: Optional[str] = Query(None, alias="md5", min_length=32, max_length=32),
     mods_arg: Optional[str] = Query(None, alias="mods"),
@@ -691,7 +692,14 @@ async def api_get_map_scores(
     else:  # recent
         sort = "play_time"
 
-    query.append(f"ORDER BY {sort} DESC LIMIT :limit")
+    if sort:
+        if sort_order == "ascending":
+            sort_order = "ASC"
+        else:
+            sort_order = "DESC"
+    else:
+        sort_order = "DESC"
+    query.append(f"ORDER BY {sort} {sort_order} LIMIT :limit")
     params["limit"] = limit
 
     rows = await app.state.services.database.fetch_all(" ".join(query), params)

@@ -48,11 +48,13 @@ from app.objects.match import MatchTeamTypes
 from app.objects.match import MatchWinConditions
 from app.objects.match import Slot
 from app.objects.match import SlotStatus
+from app.objects.match import multiplayer_change_host_event, multiplayer_close_lobby_event, multiplayer_event, multiplayer_join_leave_event
 from app.objects.menu import Menu
 from app.objects.menu import MenuCommands
 from app.objects.menu import MenuFunction
 from app.objects.player import Action
 from app.objects.player import ClientDetails
+from app.objects.player import LeaveMatchEnum
 from app.objects.player import OsuStream
 from app.objects.player import OsuVersion
 from app.objects.player import Player
@@ -1370,9 +1372,19 @@ class MatchCreate(BasePacket):
         app.state.sessions.matches[match_id] = match
         app.state.sessions.channels.append(chat_channel)
         match.chat = chat_channel
+        
+        query = f"""INSERT INTO multiplayer_matches (name, creation_time) VALUES (:name, UNIX_TIMESTAMP())"""
+        params = {
+            "name": match.name
+        }
+        rec_id = await app.state.services.database.execute(query, params)
+        match.db_match_id = rec_id
 
         player.update_latest_activity_soon()
-        player.join_match(match, self.match_data.passwd)
+        if player.join_match(match, self.match_data.passwd):
+            rec_id = await multiplayer_join_leave_event(match, player, True)
+            await multiplayer_event(match.db_match_id, join_leave_event=rec_id)
+        
 
         match.chat.send_bot(f"Partida criada por {player.name}.")
         log(f"{player} created a new multiplayer match.")
@@ -1449,15 +1461,25 @@ class MatchJoin(BasePacket):
             )
             return
 
+
         player.update_latest_activity_soon()
-        player.join_match(match, self.match_passwd)
+        if player.join_match(match, self.match_passwd):
+            rec_id = await multiplayer_join_leave_event(match, player, True)
+            await multiplayer_event(match.db_match_id, join_leave_event=rec_id)
 
 
 @register(ClientPackets.PART_MATCH)
 class MatchPart(BasePacket):
     async def handle(self, player: Player) -> None:
+        lobby = player.match
         player.update_latest_activity_soon()
-        player.leave_match()
+        leave_result = player.leave_match()
+        if leave_result != LeaveMatchEnum.Failed:
+            rec_id = await multiplayer_join_leave_event(lobby, player, False)
+            await multiplayer_event(lobby.db_match_id, join_leave_event=rec_id)
+            if leave_result == LeaveMatchEnum.CloseLobby:
+                rec_id = await multiplayer_close_lobby_event(lobby)
+                await multiplayer_event(lobby.db_match_id, close_event=rec_id)
 
 
 @register(ClientPackets.MATCH_CHANGE_SLOT)
@@ -1733,6 +1755,8 @@ class MatchComplete(BasePacket):
             immune=not_playing,
         )
         player.match.enqueue_state()
+        
+        asyncio.create_task(player.match.await_submissions(was_playing, save_to_mp_link=True))
 
         if player.match.is_scrimming:
             # determine winner, update match points & inform players.
@@ -1905,6 +1929,8 @@ class MatchTransferHost(BasePacket):
         player.match.host_id = target.id
         player.match.host.enqueue(app.packets.match_transfer_host())
         player.match.enqueue_state()
+        rec_id = await multiplayer_change_host_event(player.match, player, target)
+        await multiplayer_event(player.match.db_match_id, change_host_event=rec_id)
 
 
 @register(ClientPackets.TOURNAMENT_MATCH_INFO_REQUEST)

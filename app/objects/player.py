@@ -33,6 +33,7 @@ from app.objects.match import MatchTeams
 from app.objects.match import MatchTeamTypes
 from app.objects.match import Slot
 from app.objects.match import SlotStatus
+from app.objects.match import multiplayer_change_host_event, multiplayer_close_lobby_event, multiplayer_event, multiplayer_join_leave_event
 from app.objects.menu import Menu
 from app.objects.menu import menu_keygen
 from app.objects.menu import MenuCommands
@@ -83,6 +84,11 @@ class Action(IntEnum):
     Multiplaying = 12
     OsuDirect = 13
 
+class LeaveMatchEnum(IntEnum):
+    Failed = -1
+    Success = 0
+    CloseLobby = 1
+
 
 @dataclass
 class ModeData:
@@ -120,6 +126,8 @@ async def bot_hello(player: Player) -> None:
 
 async def notif_hello(player: Player) -> None:
     player.enqueue(app.packets.notification(f"olá {player.name}!"))
+    
+
 
 
 MENU2 = Menu(
@@ -683,12 +691,12 @@ class Player:
 
         return True
 
-    def leave_match(self) -> None:
+    def leave_match(self) -> LeaveMatchEnum:
         """Attempt to remove `self` from their match."""
         if not self.match:
             if app.settings.DEBUG:
                 log(f"{self} tried leaving a match they're not in?", Ansi.LYELLOW)
-            return
+            return LeaveMatchEnum.Failed
 
         slot = self.match.get_slot(self)
         assert slot is not None
@@ -704,9 +712,11 @@ class Player:
 
         self.leave_channel(self.match.chat)
 
+        should_close_lobby = False
         if all(s.empty() for s in self.match.slots):
             # multi is now empty, chat has been removed.
             # remove the multi from the channels list.
+            should_close_lobby = True
             log(f"Match {self.match} finished.")
 
             # cancel any pending start timers
@@ -718,7 +728,6 @@ class Player:
                 self.match.starting = None
 
             app.state.sessions.matches.remove(self.match)
-
             lobby = app.state.sessions.channels["#lobby"]
             if lobby:
                 lobby.enqueue(app.packets.dispose_match(self.match.id))
@@ -740,6 +749,9 @@ class Player:
             self.match.enqueue_state()
 
         self.match = None
+        if should_close_lobby:
+            return LeaveMatchEnum.CloseLobby
+        return LeaveMatchEnum.Success
 
     async def join_clan(self, clan: "Clan") -> bool:
         """Attempt to add `self` to `clan`."""

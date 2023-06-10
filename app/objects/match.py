@@ -24,6 +24,7 @@ from app.constants.mods import Mods
 from app.logging import Ansi
 from app.logging import log
 from app.objects.beatmap import Beatmap
+from app.objects.score import Score
 from app.utils import escape_enum
 from app.utils import pymysql_encode
 
@@ -44,6 +45,94 @@ __all__ = (
     "Match",
 )
 
+async def multiplayer_event(match_id: int, join_leave_event: int = None, match_play_event: int = None, close_event: int = None, change_host_event: int = None):
+    query = f"""\
+            INSERT INTO multiplayer_event (match_id, join_leave_event, match_play_event, close_event, change_host_event, event_time) 
+            VALUES (:match_id, :join_leave_event, :match_play_event, :close_event, :change_host_event, UNIX_TIMESTAMP())
+    """
+    params = {
+        "match_id": match_id, 
+        "join_leave_event": join_leave_event,
+        "match_play_event": match_play_event,
+        "close_event": close_event,
+        "change_host_event": change_host_event
+    }
+    await app.state.services.database.execute(query, params)
+    
+async def multiplayer_join_leave_event(match: Match, player: Player, is_join: bool):
+    query = f"""\
+            INSERT INTO multiplayer_join_leave_event (match_id, player_id, is_join, event_time) 
+            VALUES (:match_id, :player_id, :is_join, UNIX_TIMESTAMP())
+        """
+    params = {
+        "match_id": match.db_match_id, 
+        "player_id": player.id,
+        "is_join": is_join, 
+    }
+    return await app.state.services.database.execute(query, params)
+
+
+async def multiplayer_close_lobby_event(match: Match):
+    query = f"""\
+            INSERT INTO multiplayer_close_lobby_event (match_id, event_time) 
+            VALUES (:match_id, UNIX_TIMESTAMP())
+        """
+    params = {
+        "match_id": match.db_match_id, 
+    }
+    return await app.state.services.database.execute(query, params)
+
+async def multiplayer_change_host_event(match: Match, old_host: Player, new_host: Player):
+    query = f"""\
+            INSERT INTO multiplayer_change_host_event (match_id, event_time, old_host, new_host) 
+            VALUES (:match_id, UNIX_TIMESTAMP(), :old_host, :new_host)
+        """
+    params = {
+        "match_id": match.db_match_id, 
+        "old_host": old_host.id, 
+        "new_host":new_host.id
+    }
+    return await app.state.services.database.execute(query, params)
+
+async def match_maps(match: Match, bmap: Beatmap):
+    query = f"""\
+            INSERT INTO match_maps (match_id, bmap_id, map_md5, win_condition, gamemode, team_type) 
+            VALUES (:match_id, :bmap_id, :map_md5, :win_condition, :gamemode, :team_type)
+        """
+    params = {
+        "match_id": match.db_match_id, 
+        "bmap_id": bmap.id,
+        "map_md5": bmap.md5,
+        "win_condition": match.win_condition,
+        "gamemode": match.mode,
+        "team_type": match.team_type
+    }
+    return await app.state.services.database.execute(query, params)
+
+async def match_plays(match_map_id: int, match: Match, player: Player, score: Score):
+    query = f"""\
+            INSERT INTO match_plays (match_id, match_map_id, player_id, score, accuracy, pp, used_mods, play_time, n300, n100, n50, nmiss, ngeki, nkatu, grade, passed, perfect) 
+            VALUES (:match_id, :match_map_id, :player_id, :score, :accuracy, :pp, :used_mods, UNIX_TIMESTAMP(), :n300, :n100, :n50, :nmiss, :ngeki, :nkatu, :grade, :passed, :perfect)
+        """
+    params = {
+        "match_id": match.db_match_id, 
+        "match_map_id": match_map_id,
+        "player_id": player.id,
+        "score": score.score,
+        "accuracy": score.acc,
+        "pp": score.pp,
+        "used_mods": score.mods,
+        "n300": score.n300, 
+        "n100": score.n100, 
+        "n50": score.n50, 
+        "nmiss": score.nmiss,
+        "ngeki": score.ngeki, 
+        "nkatu": score.nkatu, 
+        "grade": score.grade.value, 
+        "passed": score.passed, 
+        "perfect": score.perfect
+    }
+    return await app.state.services.database.execute(query, params)
 
 @unique
 @pymysql_encode(escape_enum)
@@ -220,8 +309,10 @@ class Match:
         freemods: bool,
         seed: int,
         chat_channel: Channel,
+        db_match_id: int = -1
     ) -> None:
         self.id = id
+        self.db_match_id = db_match_id
         self.name = name
         self.passwd = password
 
@@ -398,6 +489,7 @@ class Match:
     async def await_submissions(
         self,
         was_playing: Sequence[Slot],
+        save_to_mp_link: bool = False
     ) -> tuple[dict[Union[MatchTeams, Player], int], Sequence[Player]]:
         """Await score submissions from all players in completed state."""
         scores: dict[Union[MatchTeams, Player], int] = defaultdict(int)
@@ -416,29 +508,38 @@ class Match:
         if not bmap:
             # map isn't submitted
             return {}, ()
-
+        
+        log("started awaiting for subissions")
+        if save_to_mp_link:
+            recv_id = await match_maps(self, bmap)
+            
         for s in was_playing:
             # continue trying to fetch each player's
             # scores until they've all been submitted.
+            log(f"trying to fetch {s.player.name}'s score")
             while True:
                 rc_score = s.player.recent_score
-                max_age = datetime.now() - timedelta(
-                    seconds=bmap.total_length + time_waited + 0.5,
-                )
+                # max_age = datetime.now() - timedelta(
+                #     seconds=bmap.total_length + time_waited + 0.5,
+                # )
 
                 if (
                     rc_score
                     and rc_score.bmap.md5 == self.map_md5
-                    and rc_score.server_time > max_age
+                    #and rc_score.server_time > max_age
                 ):
+                    log(f"found {s.player.name}'s score")
                     # score found, add to our scores dict if != 0.
                     score = getattr(rc_score, win_cond)
                     if score:
                         key = s.player if ffa else s.team
                         scores[key] += score
-
+                        if save_to_mp_link:
+                            play_id = await match_plays(recv_id, self, s.player, rc_score)
+                            await multiplayer_event(self.db_match_id, match_play_event=play_id)
                     break
 
+                log(f"failed to found {s.player.name}'s score")
                 # wait 0.5s and try again
                 await asyncio.sleep(0.5)
                 time_waited += 0.5

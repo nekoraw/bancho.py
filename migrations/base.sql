@@ -330,6 +330,90 @@ create table users
 		unique (safe_name)
 );
 
+CREATE TABLE multiplayer_matches (
+	id INT AUTO_INCREMENT PRIMARY KEY,
+	name VARCHAR(50) not null,
+	creation_time int default 0 not null
+);
+
+CREATE TABLE match_maps (
+	id INT AUTO_INCREMENT PRIMARY KEY,
+	match_id INT not null,
+	bmap_id INT not null,
+	map_md5 char(32) not null,
+	win_condition int not null,
+	gamemode int not null,
+	team_type int not null,
+	FOREIGN KEY (match_id) REFERENCES multiplayer_matches(id)
+);
+
+CREATE TABLE match_plays (
+	id INT AUTO_INCREMENT PRIMARY KEY,
+	match_map_id INT not null,
+	match_id INT not null,
+	player_id INT not null,
+	play_time int not null,
+	score INT not null,
+	accuracy float(6,3) not null,
+	pp float(7,3) not null,
+	used_mods int not null,
+	n300 int not null,
+	n100 int not null,
+	n50 int not null,
+	nmiss int not null,
+	ngeki int not null,
+	nkatu int not null,
+	grade  int not null,
+	passed boolean not null,
+	perfect boolean not null,
+	FOREIGN KEY (match_id) REFERENCES multiplayer_matches(id),
+	FOREIGN KEY (match_map_id) REFERENCES match_maps(id),
+	FOREIGN KEY (player_id) REFERENCES users(id)
+);
+
+CREATE TABLE multiplayer_join_leave_event (
+	id INT AUTO_INCREMENT PRIMARY KEY,
+	match_id INT not null,
+	player_id INT not null,
+	event_time int not null,
+	is_join boolean not null,
+	FOREIGN KEY (match_id) REFERENCES multiplayer_matches(id),
+	FOREIGN KEY (player_id) REFERENCES users(id)
+);
+
+CREATE TABLE multiplayer_close_lobby_event (
+	id INT AUTO_INCREMENT PRIMARY KEY,
+	match_id INT not null,
+	event_time int not null,
+	FOREIGN KEY (match_id) REFERENCES multiplayer_matches(id)
+);
+
+CREATE TABLE multiplayer_change_host_event (
+	id INT AUTO_INCREMENT PRIMARY KEY,
+	match_id INT not null,
+	event_time int not null,
+	old_host int not null,
+	new_host int not null,
+	FOREIGN KEY (match_id) REFERENCES multiplayer_matches(id),
+	FOREIGN KEY (old_host) REFERENCES users(id),
+	FOREIGN KEY (new_host) REFERENCES users(id)
+);
+
+CREATE TABLE multiplayer_event (
+	id INT AUTO_INCREMENT PRIMARY KEY,
+	match_id INT not null,
+	join_leave_event int,
+	match_play_event int,
+	close_event int,
+	change_host_event int,
+	event_time int not null,
+	FOREIGN KEY (match_id) REFERENCES multiplayer_matches(id),
+	FOREIGN KEY (join_leave_event) REFERENCES multiplayer_join_leave_event(id),
+	FOREIGN KEY (match_play_event) REFERENCES match_plays(id),
+	FOREIGN KEY (close_event) REFERENCES multiplayer_close_lobby_event(id),
+	FOREIGN KEY (change_host_event) REFERENCES multiplayer_change_host_event(id)
+);
+
 
 insert into users (id, name, safe_name, priv, country, silence_end, email, pw_bcrypt, creation_time, latest_activity)
 values (1, 'Mamiya Takuji', 'mamiya_takuji', 1, 'S2', 0, 'bot@nkrw.dev',
