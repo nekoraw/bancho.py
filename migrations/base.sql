@@ -352,6 +352,8 @@ CREATE TABLE match_plays (
 	match_map_id INT not null,
 	match_id INT not null,
 	player_id INT not null,
+	player_name varchar(32) charset utf8 not null,
+	player_team int not null,
 	play_time int not null,
 	score INT not null,
 	accuracy float(6,3) not null,
@@ -368,17 +370,20 @@ CREATE TABLE match_plays (
 	perfect boolean not null,
 	FOREIGN KEY (match_id) REFERENCES multiplayer_matches(id),
 	FOREIGN KEY (match_map_id) REFERENCES match_maps(id),
-	FOREIGN KEY (player_id) REFERENCES users(id)
+	FOREIGN KEY (player_id) REFERENCES users(id),
+	FOREIGN KEY (player_name) REFERENCES users(name)
 );
 
 CREATE TABLE multiplayer_join_leave_event (
 	id INT AUTO_INCREMENT PRIMARY KEY,
 	match_id INT not null,
 	player_id INT not null,
+	player_name varchar(32) charset utf8 not null,
 	event_time int not null,
 	is_join boolean not null,
 	FOREIGN KEY (match_id) REFERENCES multiplayer_matches(id),
-	FOREIGN KEY (player_id) REFERENCES users(id)
+	FOREIGN KEY (player_id) REFERENCES users(id),
+	FOREIGN KEY (player_name) REFERENCES users(name)
 );
 
 CREATE TABLE multiplayer_close_lobby_event (
@@ -393,25 +398,29 @@ CREATE TABLE multiplayer_change_host_event (
 	match_id INT not null,
 	event_time int not null,
 	old_host int not null,
+	old_host_name varchar(32) charset utf8 not null,
 	new_host int not null,
+	new_host_name varchar(32) charset utf8 not null,
 	FOREIGN KEY (match_id) REFERENCES multiplayer_matches(id),
 	FOREIGN KEY (old_host) REFERENCES users(id),
-	FOREIGN KEY (new_host) REFERENCES users(id)
+	FOREIGN KEY (new_host) REFERENCES users(id),
+	FOREIGN KEY (old_host_name) REFERENCES users(name),
+	FOREIGN KEY (new_host_name) REFERENCES users(name)
 );
 
 CREATE TABLE multiplayer_event (
 	id INT AUTO_INCREMENT PRIMARY KEY,
 	match_id INT not null,
 	join_leave_event int,
-	match_play_event int,
 	close_event int,
 	change_host_event int,
+	match_maps int,
 	event_time int not null,
 	FOREIGN KEY (match_id) REFERENCES multiplayer_matches(id),
 	FOREIGN KEY (join_leave_event) REFERENCES multiplayer_join_leave_event(id),
-	FOREIGN KEY (match_play_event) REFERENCES match_plays(id),
 	FOREIGN KEY (close_event) REFERENCES multiplayer_close_lobby_event(id),
-	FOREIGN KEY (change_host_event) REFERENCES multiplayer_change_host_event(id)
+	FOREIGN KEY (change_host_event) REFERENCES multiplayer_change_host_event(id),
+	FOREIGN KEY (match_maps) REFERENCES match_maps(id)
 );
 
 

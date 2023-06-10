@@ -45,28 +45,29 @@ __all__ = (
     "Match",
 )
 
-async def multiplayer_event(match_id: int, join_leave_event: int = None, match_play_event: int = None, close_event: int = None, change_host_event: int = None):
+async def multiplayer_event(match_id: int, join_leave_event: int = None, close_event: int = None, change_host_event: int = None, match_maps: int = None):
     query = f"""\
-            INSERT INTO multiplayer_event (match_id, join_leave_event, match_play_event, close_event, change_host_event, event_time) 
-            VALUES (:match_id, :join_leave_event, :match_play_event, :close_event, :change_host_event, UNIX_TIMESTAMP())
+            INSERT INTO multiplayer_event (match_id, join_leave_event, close_event, change_host_event, match_maps, event_time) 
+            VALUES (:match_id, :join_leave_event, :close_event, :change_host_event, :match_maps, UNIX_TIMESTAMP())
     """
     params = {
         "match_id": match_id, 
         "join_leave_event": join_leave_event,
-        "match_play_event": match_play_event,
         "close_event": close_event,
-        "change_host_event": change_host_event
+        "change_host_event": change_host_event,
+        "match_maps": match_maps
     }
     await app.state.services.database.execute(query, params)
     
 async def multiplayer_join_leave_event(match: Match, player: Player, is_join: bool):
     query = f"""\
-            INSERT INTO multiplayer_join_leave_event (match_id, player_id, is_join, event_time) 
-            VALUES (:match_id, :player_id, :is_join, UNIX_TIMESTAMP())
+            INSERT INTO multiplayer_join_leave_event (match_id, player_id, player_name, is_join, event_time) 
+            VALUES (:match_id, :player_id, :player_name, :is_join, UNIX_TIMESTAMP())
         """
     params = {
         "match_id": match.db_match_id, 
         "player_id": player.id,
+        "player_name": player.name,
         "is_join": is_join, 
     }
     return await app.state.services.database.execute(query, params)
@@ -84,13 +85,15 @@ async def multiplayer_close_lobby_event(match: Match):
 
 async def multiplayer_change_host_event(match: Match, old_host: Player, new_host: Player):
     query = f"""\
-            INSERT INTO multiplayer_change_host_event (match_id, event_time, old_host, new_host) 
-            VALUES (:match_id, UNIX_TIMESTAMP(), :old_host, :new_host)
+            INSERT INTO multiplayer_change_host_event (match_id, event_time, old_host, old_host_name, new_host, new_host_name) 
+            VALUES (:match_id, UNIX_TIMESTAMP(), :old_host, :old_host_name, :new_host, :new_host_name)
         """
     params = {
         "match_id": match.db_match_id, 
-        "old_host": old_host.id, 
-        "new_host":new_host.id
+        "old_host": old_host.id,
+        "old_host_name": old_host.name,
+        "new_host": new_host.id,
+        "new_host_name": new_host.name
     }
     return await app.state.services.database.execute(query, params)
 
@@ -109,15 +112,17 @@ async def match_maps(match: Match, bmap: Beatmap):
     }
     return await app.state.services.database.execute(query, params)
 
-async def match_plays(match_map_id: int, match: Match, player: Player, score: Score):
+async def match_plays(match_map_id: int, match: Match, player: Player, score: Score, team_color: int):
     query = f"""\
-            INSERT INTO match_plays (match_id, match_map_id, player_id, score, accuracy, pp, used_mods, play_time, n300, n100, n50, nmiss, ngeki, nkatu, grade, passed, perfect) 
-            VALUES (:match_id, :match_map_id, :player_id, :score, :accuracy, :pp, :used_mods, UNIX_TIMESTAMP(), :n300, :n100, :n50, :nmiss, :ngeki, :nkatu, :grade, :passed, :perfect)
+            INSERT INTO match_plays (match_id, match_map_id, player_id, player_name, player_team, score, accuracy, pp, used_mods, play_time, n300, n100, n50, nmiss, ngeki, nkatu, grade, passed, perfect) 
+            VALUES (:match_id, :match_map_id, :player_id, :player_name, :player_team, :score, :accuracy, :pp, :used_mods, UNIX_TIMESTAMP(), :n300, :n100, :n50, :nmiss, :ngeki, :nkatu, :grade, :passed, :perfect)
         """
     params = {
         "match_id": match.db_match_id, 
         "match_map_id": match_map_id,
         "player_id": player.id,
+        "player_name": player.name,
+        "player_team": team_color,
         "score": score.score,
         "accuracy": score.acc,
         "pp": score.pp,
@@ -512,6 +517,7 @@ class Match:
         log("started awaiting for subissions")
         if save_to_mp_link:
             recv_id = await match_maps(self, bmap)
+            await multiplayer_event(self.db_match_id, match_maps=recv_id)
             
         for s in was_playing:
             # continue trying to fetch each player's
@@ -519,14 +525,14 @@ class Match:
             log(f"trying to fetch {s.player.name}'s score")
             while True:
                 rc_score = s.player.recent_score
-                # max_age = datetime.now() - timedelta(
-                #     seconds=bmap.total_length + time_waited + 0.5,
-                # )
+                max_age = datetime.now() - timedelta(
+                    seconds=bmap.total_length + time_waited + 0.5,
+                )
 
                 if (
                     rc_score
                     and rc_score.bmap.md5 == self.map_md5
-                    #and rc_score.server_time > max_age
+                    and rc_score.server_time > max_age
                 ):
                     log(f"found {s.player.name}'s score")
                     # score found, add to our scores dict if != 0.
@@ -535,8 +541,7 @@ class Match:
                         key = s.player if ffa else s.team
                         scores[key] += score
                         if save_to_mp_link:
-                            play_id = await match_plays(recv_id, self, s.player, rc_score)
-                            await multiplayer_event(self.db_match_id, match_play_event=play_id)
+                            play_id = await match_plays(recv_id, self, s.player, rc_score, s.team)
                     break
 
                 log(f"failed to found {s.player.name}'s score")

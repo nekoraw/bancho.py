@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import hashlib
 import struct
+from datetime import datetime
 from pathlib import Path as SystemPath
 from typing import Literal
 from typing import Optional
@@ -25,7 +26,11 @@ from app.constants.mods import Mods
 from app.objects.beatmap import Beatmap
 from app.objects.beatmap import ensure_local_osu_file
 from app.objects.clan import Clan
+from app.objects.match import MatchWinConditions
+from app.objects.match import MatchTeamTypes
+from app.objects.match import MatchTeams
 from app.objects.player import Player
+from app.objects.score import Grade
 from app.repositories import players as players_repo
 from app.repositories import scores as scores_repo
 from app.repositories import stats as stats_repo
@@ -562,6 +567,100 @@ async def api_get_player_most_played(
         {
             "status": "success",
             "maps": [dict(row) for row in rows],
+        },
+    )
+    
+@router.get("/get_match")
+async def api_get_match(
+    uid: int = Query(0, alias="id"),
+    limit: int = Query(25, ge=1, le=100),
+):
+    """Returns the match json."""
+    
+    match = await app.state.services.database.fetch_one(
+        f"SELECT id FROM multiplayer_matches WHERE id = {uid}"
+    )
+    print(match)
+    if match is None:
+        return ORJSONResponse(
+            {
+                "status": "Match not found.",
+            },
+        )
+    
+    match = await app.state.services.database.fetch_all(
+        f"SELECT join_leave_event, close_event, change_host_event, match_maps, event_time FROM multiplayer_event WHERE match_id = {uid}"
+    )
+    data = [dict(row) for row in match]
+    
+    for i, row in enumerate(data.copy()):
+        if row["join_leave_event"] is not None:
+            event = await app.state.services.database.fetch_one(
+                f"SELECT player_id, player_name, is_join, event_time FROM multiplayer_join_leave_event WHERE id = {row['join_leave_event']}"
+            )
+            event = dict(event)
+            data[i] = {
+                "type": "player_join" if event["is_join"] else "player_leave",
+                "player_id": event["player_id"],
+                "player_name": event["player_name"],
+                "time": datetime.fromtimestamp(event["event_time"]).isoformat()
+            }
+        elif row["close_event"] is not None:
+            event = await app.state.services.database.fetch_one(
+                f"SELECT event_time FROM multiplayer_close_lobby_event WHERE id = {row['close_event']}"
+            )
+            event = dict(event)
+            data[i] = {
+                "type": "lobby_close",
+                "time": datetime.fromtimestamp(event["event_time"]).isoformat()
+            }
+        elif row["change_host_event"] is not None:
+            event = await app.state.services.database.fetch_one(
+                f"SELECT old_host, old_host_name, new_host, new_host_name, event_time FROM multiplayer_change_host_event WHERE id = {row['change_host_event']}"
+            )
+            event = dict(event)
+            data[i] = {
+                "type": "change_host",
+                "old_player": event["old_host"],
+                "new_player": event["new_host"],
+                "old_player_name": event["old_host_name"],
+                "new_player_name": event["new_host_name"],
+                "time": datetime.fromtimestamp(event["event_time"]).isoformat()
+            }
+        elif row["match_maps"] is not None:
+            event = await app.state.services.database.fetch_one(
+                f"SELECT * FROM match_maps WHERE id = {row['match_maps']}"
+            )
+            event = dict(event)
+            del event["id"]
+            del event["match_id"]
+            event["type"] = "beatmap_play"
+            event["win_condition"] = MatchWinConditions(event["win_condition"]).name
+            event["gamemode"] = GameMode(event["gamemode"]).name
+            event["team_type"] = MatchTeamTypes(event["team_type"]).name
+            event["event_time"] = datetime.fromtimestamp(row["event_time"]).isoformat()
+            
+            events = await app.state.services.database.fetch_all(
+                f"SELECT * FROM match_plays WHERE match_map_id = {row['match_maps']}"
+            )
+            scores = [dict(row) for row in events]
+            for j, score in enumerate(scores.copy()):
+                del score["id"]
+                del score["match_map_id"]
+                del score["match_id"]
+                score["play_time"] = datetime.fromtimestamp(score["play_time"]).isoformat()
+                score["grade"] = Grade(score["grade"]).name
+                score["player_team"] = MatchTeams(score["player_team"]).name
+                score["used_mods"] = Mods(score["used_mods"]).__repr__()
+                scores[j] = score
+            
+            event["scores"] = scores
+            data[i] = event
+    
+    return ORJSONResponse(
+        {
+            "status": "success",
+            "match": data,
         },
     )
 

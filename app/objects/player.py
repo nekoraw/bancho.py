@@ -51,6 +51,8 @@ if TYPE_CHECKING:
     from app.objects.clan import Clan
     from app.constants.privileges import ClanPrivileges
 
+BASE_DOMAIN = app.settings.DOMAIN
+
 __all__ = ("ModeData", "Status", "Player")
 
 
@@ -688,6 +690,7 @@ class Player:
 
         self.enqueue(app.packets.match_join_success(match))
         match.enqueue_state()
+        match.chat.send_bot(f"Acesse o históico da partida (aqui)[https://api.{BASE_DOMAIN}/v1/get_match?id={match.db_match_id}].")
 
         return True
 

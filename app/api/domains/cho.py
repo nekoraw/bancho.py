@@ -1386,7 +1386,7 @@ class MatchCreate(BasePacket):
             await multiplayer_event(match.db_match_id, join_leave_event=rec_id)
         
 
-        match.chat.send_bot(f"Partida criada por {player.name}.")
+        match.chat.send_bot(f"Partida criada por {player.name}. Acesse o históico da partida (aqui)[https://api.{BASE_DOMAIN}/v1/get_match?id={match.db_match_id}].")
         log(f"{player} created a new multiplayer match.")
 
 
