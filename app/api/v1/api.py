@@ -578,22 +578,25 @@ async def api_get_match(
     """Returns the match json."""
     
     match = await app.state.services.database.fetch_one(
-        f"SELECT id FROM multiplayer_matches WHERE id = {uid}"
+        f"SELECT id, name FROM multiplayer_matches WHERE id = {uid}"
     )
-    print(match)
     if match is None:
         return ORJSONResponse(
             {
                 "status": "Match not found.",
             },
         )
+    match_name = dict(match)["name"]
     
     match = await app.state.services.database.fetch_all(
         f"SELECT join_leave_event, close_event, change_host_event, match_maps, event_time FROM multiplayer_event WHERE match_id = {uid}"
     )
-    data = [dict(row) for row in match]
+    data = [{}]
+    data += [dict(row) for row in match]
     
     for i, row in enumerate(data.copy()):
+        if i == 0:
+            continue # ignore first uninitialized value
         if row["join_leave_event"] is not None:
             event = await app.state.services.database.fetch_one(
                 f"SELECT player_id, player_name, is_join, event_time FROM multiplayer_join_leave_event WHERE id = {row['join_leave_event']}"
@@ -605,6 +608,16 @@ async def api_get_match(
                 "player_name": event["player_name"],
                 "time": datetime.fromtimestamp(event["event_time"]).isoformat()
             }
+            
+            if i == 1: # first join of the match means the match has been created
+                data[0] = {
+                    "type": "match_created",
+                    "name": match_name,
+                    "host_id": event["player_id"],
+                    "host_name": event["player_name"],
+                    "time": datetime.fromtimestamp(event["event_time"]).isoformat()
+                }
+            
         elif row["close_event"] is not None:
             event = await app.state.services.database.fetch_one(
                 f"SELECT event_time FROM multiplayer_close_lobby_event WHERE id = {row['close_event']}"
