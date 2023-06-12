@@ -356,6 +356,7 @@ CREATE TABLE match_plays (
 	player_team int not null,
 	play_time int not null,
 	score INT not null,
+	max_combo INT not null,
 	accuracy float(6,3) not null,
 	pp float(7,3) not null,
 	used_mods int not null,

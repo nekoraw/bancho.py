@@ -114,8 +114,8 @@ async def match_maps(match: Match, bmap: Beatmap):
 
 async def match_plays(match_map_id: int, match: Match, player: Player, score: Score, team_color: int):
     query = f"""\
-            INSERT INTO match_plays (match_id, match_map_id, player_id, player_name, player_team, score, accuracy, pp, used_mods, play_time, n300, n100, n50, nmiss, ngeki, nkatu, grade, passed, perfect) 
-            VALUES (:match_id, :match_map_id, :player_id, :player_name, :player_team, :score, :accuracy, :pp, :used_mods, UNIX_TIMESTAMP(), :n300, :n100, :n50, :nmiss, :ngeki, :nkatu, :grade, :passed, :perfect)
+            INSERT INTO match_plays (match_id, match_map_id, player_id, player_name, player_team, score, max_combo, accuracy, pp, used_mods, play_time, n300, n100, n50, nmiss, ngeki, nkatu, grade, passed, perfect) 
+            VALUES (:match_id, :match_map_id, :player_id, :player_name, :player_team, :score, :max_combo, :accuracy, :pp, :used_mods, UNIX_TIMESTAMP(), :n300, :n100, :n50, :nmiss, :ngeki, :nkatu, :grade, :passed, :perfect)
         """
     params = {
         "match_id": match.db_match_id, 
@@ -124,6 +124,7 @@ async def match_plays(match_map_id: int, match: Match, player: Player, score: Sc
         "player_name": player.name,
         "player_team": team_color,
         "score": score.score,
+        "max_combo": score.max_combo,
         "accuracy": score.acc,
         "pp": score.pp,
         "used_mods": score.mods,
