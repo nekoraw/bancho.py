@@ -690,7 +690,7 @@ class Player:
 
         self.enqueue(app.packets.match_join_success(match))
         match.enqueue_state()
-        match.chat.send_bot(f"Acesse o históico da partida (aqui)[https://api.{BASE_DOMAIN}/v1/get_match?id={match.db_match_id}].")
+        match.chat.send_bot(f"Acesse o histórico da partida (aqui)[https://api.{BASE_DOMAIN}/v1/get_match?id={match.db_match_id}].")
 
         return True
 
