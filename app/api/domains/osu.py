@@ -1829,6 +1829,13 @@ async def peppyDMHandler():
 
 """ ingame registration """
 
+async def parse_errors(errors: Mapping[str, list[str]]):
+    errors = {k: ["\n".join(v)] for k, v in errors.items()}
+    errors_full = {"form_error": {"user": errors}}
+    return ORJSONResponse(
+        content=errors_full,
+        status_code=status.HTTP_400_BAD_REQUEST,
+    )
 
 @router.post("/users")
 async def register_account(
@@ -1854,6 +1861,14 @@ async def register_account(
     # are safe for registration.
     errors: Mapping[str, list[str]] = defaultdict(list)
 
+    if app.settings.DISABLE_INGAME_REGISTRATION:
+        error_message = f"O registro está desabilitado. Se registre pelo site em https://{app.settings.DOMAIN}/."
+        errors = {
+            "username": [error_message],
+            "user_email": [error_message],
+            "password": [error_message]
+        }
+        return await parse_errors(errors)
     # Usernames must:
     # - be within 2-12 characters in length
     # - not contain both ' ' and '_', one is fine
@@ -1935,12 +1950,7 @@ async def register_account(
 
     if errors:
         # we have errors to send back, send them back delimited by newlines.
-        errors = {k: ["\n".join(v)] for k, v in errors.items()}
-        errors_full = {"form_error": {"user": errors}}
-        return ORJSONResponse(
-            content=errors_full,
-            status_code=status.HTTP_400_BAD_REQUEST,
-        )
+        return await parse_errors(errors)
 
     if check == 0:
         # the client isn't just checking values,
