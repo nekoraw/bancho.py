@@ -285,6 +285,16 @@ create table user_achievements
 	primary key (userid, achid)
 );
 
+create table register_keys
+(
+	reg_key char(36) not null unique,
+	user_id_created int not null,
+	user_id_used int default 0 not null,
+	creation_time int default 0 not null,
+	used boolean default false not null,
+	primary key(reg_key)
+);
+
 create table users
 (
 	id int auto_increment
@@ -300,6 +310,8 @@ create table users
 	creation_time int default 0 not null,
 	latest_activity int default 0 not null,
 	clan_id int default 0 not null,
+	n_available_keys int default 0 not null,
+	registered_with_key char(36) default null,
 	clan_priv tinyint(1) default 0 not null,
 	preferred_mode int default 0 not null,
 	play_style int default 0 not null,
@@ -307,6 +319,7 @@ create table users
 	custom_badge_icon varchar(64) null,
 	userpage_content varchar(2048) charset utf8 null,
 	api_key char(36) null,
+	foreign key (registered_with_key) references register_keys(reg_key),
 	constraint users_api_key_uindex
 		unique (api_key),
 	constraint users_email_uindex
@@ -317,9 +330,108 @@ create table users
 		unique (safe_name)
 );
 
+CREATE TABLE multiplayer_matches (
+	id INT AUTO_INCREMENT PRIMARY KEY,
+	name VARCHAR(50) not null,
+	creation_time int default 0 not null
+);
+
+CREATE TABLE match_maps (
+	id INT AUTO_INCREMENT PRIMARY KEY,
+	match_id INT not null,
+	bmap_id INT not null,
+	bmapset_id INT not null,
+	map_md5 char(32) not null,
+	win_condition int not null,
+	gamemode int not null,
+	team_type int not null,
+	FOREIGN KEY (match_id) REFERENCES multiplayer_matches(id)
+);
+
+CREATE TABLE match_plays (
+	id INT AUTO_INCREMENT PRIMARY KEY,
+	match_map_id INT not null,
+	match_id INT not null,
+	player_id INT not null,
+	player_name varchar(32) charset utf8 not null,
+	player_team int not null,
+	player_country char(2) not null,
+	play_time int not null,
+	score INT not null,
+	max_combo INT not null,
+	accuracy float(6,3) not null,
+	pp float(7,3) not null,
+	used_mods int not null,
+	n300 int not null,
+	n100 int not null,
+	n50 int not null,
+	nmiss int not null,
+	ngeki int not null,
+	nkatu int not null,
+	grade  int not null,
+	passed boolean not null,
+	perfect boolean not null,
+	FOREIGN KEY (match_id) REFERENCES multiplayer_matches(id),
+	FOREIGN KEY (match_map_id) REFERENCES match_maps(id),
+	FOREIGN KEY (player_id) REFERENCES users(id),
+	FOREIGN KEY (player_name) REFERENCES users(name)
+);
+
+CREATE TABLE multiplayer_join_leave_event (
+	id INT AUTO_INCREMENT PRIMARY KEY,
+	match_id INT not null,
+	player_id INT not null,
+	player_name varchar(32) charset utf8 not null,
+	event_time int not null,
+	is_join boolean not null,
+	FOREIGN KEY (match_id) REFERENCES multiplayer_matches(id),
+	FOREIGN KEY (player_id) REFERENCES users(id),
+	FOREIGN KEY (player_name) REFERENCES users(name)
+);
+
+CREATE TABLE multiplayer_close_lobby_event (
+	id INT AUTO_INCREMENT PRIMARY KEY,
+	match_id INT not null,
+	event_time int not null,
+	FOREIGN KEY (match_id) REFERENCES multiplayer_matches(id)
+);
+
+CREATE TABLE multiplayer_change_host_event (
+	id INT AUTO_INCREMENT PRIMARY KEY,
+	match_id INT not null,
+	event_time int not null,
+	old_host int not null,
+	old_host_name varchar(32) charset utf8 not null,
+	new_host int not null,
+	new_host_name varchar(32) charset utf8 not null,
+	FOREIGN KEY (match_id) REFERENCES multiplayer_matches(id),
+	FOREIGN KEY (old_host) REFERENCES users(id),
+	FOREIGN KEY (new_host) REFERENCES users(id),
+	FOREIGN KEY (old_host_name) REFERENCES users(name),
+	FOREIGN KEY (new_host_name) REFERENCES users(name)
+);
+
+CREATE TABLE multiplayer_event (
+	id INT AUTO_INCREMENT PRIMARY KEY,
+	match_id INT not null,
+	join_leave_event int,
+	close_event int,
+	change_host_event int,
+	match_maps int,
+	event_time int not null,
+	FOREIGN KEY (match_id) REFERENCES multiplayer_matches(id),
+	FOREIGN KEY (join_leave_event) REFERENCES multiplayer_join_leave_event(id),
+	FOREIGN KEY (close_event) REFERENCES multiplayer_close_lobby_event(id),
+	FOREIGN KEY (change_host_event) REFERENCES multiplayer_change_host_event(id),
+	FOREIGN KEY (match_maps) REFERENCES match_maps(id)
+);
+
+
 insert into users (id, name, safe_name, priv, country, silence_end, email, pw_bcrypt, creation_time, latest_activity)
-values (1, 'BanchoBot', 'banchobot', 1, 'ca', 0, 'bot@akatsuki.pw',
+values (1, 'Mamiya Takuji', 'mamiya_takuji', 1, 'D1', 0, 'bot@nkrw.dev',
         '_______________________my_cool_bcrypt_______________________', UNIX_TIMESTAMP(), UNIX_TIMESTAMP());
+
+insert into register_keys(reg_key, user_id_created, creation_time) values ("7ee7ba5e-05ab-456a-b500-c9127a5faa42", 1, UNIX_TIMESTAMP());
 
 INSERT INTO stats (id, mode) VALUES (1, 0); # vn!std
 INSERT INTO stats (id, mode) VALUES (1, 1); # vn!taiko

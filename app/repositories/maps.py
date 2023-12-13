@@ -137,7 +137,7 @@ async def create(
         "id": id,
         "server": server,
         "set_id": set_id,
-        "status": status,
+        "status": status if status != 0 else 3,
         "md5": md5,
         "artist": artist,
         "title": title,
@@ -319,7 +319,7 @@ async def update(
     if not isinstance(set_id, _UnsetSentinel):
         update_fields["set_id"] = set_id
     if not isinstance(status, _UnsetSentinel):
-        update_fields["status"] = status
+        update_fields["status"] = status if status != 0 else 3
     if not isinstance(md5, _UnsetSentinel):
         update_fields["md5"] = md5
     if not isinstance(artist, _UnsetSentinel):

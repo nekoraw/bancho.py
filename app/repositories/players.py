@@ -20,6 +20,7 @@ from app.utils import make_safe_name
 # | priv              | int           | NO   |     | 1       |                |
 # | pw_bcrypt         | char(60)      | NO   |     | NULL    |                |
 # | country           | char(2)       | NO   |     | xx      |                |
+# | registered_with_key| char(36)     |      |     |         |                |
 # | silence_end       | int           | NO   |     | 0       |                |
 # | donor_end         | int           | NO   |     | 0       |                |
 # | creation_time     | int           | NO   |     | 0       |                |
@@ -38,7 +39,7 @@ READ_PARAMS = textwrap.dedent(
     """\
         id, name, safe_name, priv, country, silence_end, donor_end, creation_time,
         latest_activity, clan_id, clan_priv, preferred_mode, play_style, custom_badge_name,
-        custom_badge_icon, userpage_content
+        custom_badge_icon, userpage_content, registered_with_key
     """,
 )
 
@@ -89,11 +90,12 @@ async def create(
     email: str,
     pw_bcrypt: bytes,
     country: str,
-) -> Player:
+    registered_with_key
+) -> dict[str, Any]:
     """Create a new player in the database."""
     query = f"""\
-        INSERT INTO users (name, safe_name, email, pw_bcrypt, country, creation_time, latest_activity)
-             VALUES (:name, :safe_name, :email, :pw_bcrypt, :country, UNIX_TIMESTAMP(), UNIX_TIMESTAMP())
+        INSERT INTO users (name, safe_name, email, pw_bcrypt, country, registered_with_key,  creation_time, latest_activity)
+             VALUES (:name, :safe_name, :email, :pw_bcrypt, :country, :registered_with_key,  UNIX_TIMESTAMP(), UNIX_TIMESTAMP())
     """
     params: dict[str, Any] = {
         "name": name,
@@ -101,6 +103,7 @@ async def create(
         "email": email,
         "pw_bcrypt": pw_bcrypt,
         "country": country,
+        "registered_with_key": registered_with_key,
     }
     rec_id = await app.state.services.database.execute(query, params)
 

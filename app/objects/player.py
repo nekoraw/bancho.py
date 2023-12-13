@@ -33,6 +33,7 @@ from app.objects.match import MatchTeams
 from app.objects.match import MatchTeamTypes
 from app.objects.match import Slot
 from app.objects.match import SlotStatus
+from app.objects.match import multiplayer_change_host_event, multiplayer_close_lobby_event, multiplayer_event, multiplayer_join_leave_event
 from app.objects.score import Grade
 from app.repositories import stats as stats_repo
 from app.utils import escape_enum
@@ -45,6 +46,8 @@ if TYPE_CHECKING:
     from app.objects.clan import Clan
     from app.objects.score import Score
     from app.constants.privileges import ClanPrivileges
+
+BASE_DOMAIN = app.settings.DOMAIN
 
 __all__ = ("ModeData", "Status", "Player")
 
@@ -78,6 +81,11 @@ class Action(IntEnum):
     Lobby = 11
     Multiplaying = 12
     OsuDirect = 13
+
+class LeaveMatchEnum(IntEnum):
+    Failed = -1
+    Success = 0
+    CloseLobby = 1
 
 
 @dataclass
@@ -257,6 +265,7 @@ class Player:
             },
         )
 
+        self.country = extras.get("country", self.geoloc["country"]["acronym"])
         self.utc_offset = extras.get("utc_offset", 0)
         self.pm_private = extras.get("pm_private", False)
         self.away_msg: str | None = None
@@ -291,6 +300,9 @@ class Player:
         self.tourney_client = extras.get("tourney_client", False)
 
         self.api_key = extras.get("api_key", None)
+        self.n_keys = extras.get("n_available_keys", 0)
+        self.registered_with_key = extras.get("registered_with_key", "")
+        self.creation_time = extras.get("creation_time", "")
 
         # packet queue
         self._queue = bytearray()
@@ -483,7 +495,7 @@ class Player:
                 self.id,
             )
             await app.state.services.redis.zrem(
-                f'bancho:leaderboard:{mode}:{self.geoloc["country"]["acronym"]}',
+                f'bancho:leaderboard:{mode}:{self.country}',
                 self.id,
             )
 
@@ -639,15 +651,16 @@ class Player:
 
         self.enqueue(app.packets.match_join_success(match))
         match.enqueue_state()
+        match.chat.send_bot(f"Acesse o histórico da partida (aqui)[https://{BASE_DOMAIN}/matches/{match.db_match_id}].")
 
         return True
 
-    def leave_match(self) -> None:
+    def leave_match(self) -> LeaveMatchEnum:
         """Attempt to remove `self` from their match."""
         if not self.match:
             if app.settings.DEBUG:
                 log(f"{self} tried leaving a match they're not in?", Ansi.LYELLOW)
-            return
+            return LeaveMatchEnum.Failed
 
         slot = self.match.get_slot(self)
         assert slot is not None
@@ -663,9 +676,11 @@ class Player:
 
         self.leave_channel(self.match.chat)
 
+        should_close_lobby = False
         if all(s.empty() for s in self.match.slots):
             # multi is now empty, chat has been removed.
             # remove the multi from the channels list.
+            should_close_lobby = True
             log(f"Match {self.match} finished.")
 
             # cancel any pending start timers
@@ -693,12 +708,15 @@ class Player:
 
             if self in self.match._refs:
                 self.match._refs.remove(self)
-                self.match.chat.send_bot(f"{self.name} removed from match referees.")
+                self.match.chat.send_bot(f"{self.name} removido dos juízes da partida.")
 
             # notify others of our deprature
             self.match.enqueue_state()
 
         self.match = None
+        if should_close_lobby:
+            return LeaveMatchEnum.CloseLobby
+        return LeaveMatchEnum.Success
 
     async def join_clan(self, clan: Clan) -> bool:
         """Attempt to add `self` to `clan`."""
@@ -955,7 +973,7 @@ class Player:
         if self.restricted:
             return 0
 
-        country = self.geoloc["country"]["acronym"]
+        country = self.country
         rank = await app.state.services.redis.zrevrank(
             f"bancho:leaderboard:{mode.value}:{country}",
             str(self.id),
@@ -964,7 +982,7 @@ class Player:
         return cast(int, rank) + 1 if rank is not None else 0
 
     async def update_rank(self, mode: GameMode) -> int:
-        country = self.geoloc["country"]["acronym"]
+        country = self.country
         stats = self.stats[mode]
 
         if not self.restricted:

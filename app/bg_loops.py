@@ -35,6 +35,7 @@ async def initialize_housekeeping_tasks() -> None:
 
 async def _remove_expired_donation_privileges(interval: int) -> None:
     """Remove donation privileges from users with expired sessions."""
+    return
     while True:
         if app.settings.DEBUG:
             log("Removing expired donation privileges.", Ansi.LMAGENTA)
@@ -63,7 +64,7 @@ async def _remove_expired_donation_privileges(interval: int) -> None:
 
             if player.is_online:
                 player.enqueue(
-                    app.packets.notification("Your supporter status has expired."),
+                    app.packets.notification("O seu supporter acabou."),
                 )
 
             log(f"{player}'s supporter status has expired.", Ansi.LMAGENTA)

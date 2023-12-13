@@ -232,11 +232,11 @@ class Players(list[Player]):
             clan=clan,
             clan_priv=clan_priv,
             geoloc={
-                "latitude": 0.0,
-                "longitude": 0.0,
+                "latitude": -10.8818447,
+                "longitude": -51.6441138,
                 "country": {
-                    "acronym": player["country"],
-                    "numeric": app.state.services.country_codes[player["country"]],
+                    "acronym": "br",
+                    "numeric": 31,
                 },
             },
             silence_end=player["silence_end"],

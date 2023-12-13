@@ -125,14 +125,16 @@ def download_achievement_images(achievements_path: Path) -> None:
 
 def download_default_avatar(default_avatar_path: Path) -> None:
     """Download an avatar to use as the server's default."""
-    resp = requests.get("https://i.cmyui.xyz/U24XBZw-4wjVME-JaEz3.png")
+    resp = requests.get("https://files.catbox.moe/e3m6d4.png")
+    resp2 = requests.get("https://files.catbox.moe/qitvdj.png")
 
-    if resp.status_code != 200:
+    if resp.status_code != 200 or resp2.status_code != 200:
         log("Failed to fetch default avatar.", Ansi.LRED)
         return
 
     log("Downloaded default avatar.", Ansi.LGREEN)
     default_avatar_path.write_bytes(resp.content)
+    (default_avatar_path.parent / "1.png").write_bytes(resp2.content)
 
 
 def seconds_readable(seconds: int) -> str:

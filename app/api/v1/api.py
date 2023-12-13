@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import hashlib
 import struct
+from datetime import datetime
 from pathlib import Path as SystemPath
 from typing import Literal
 
@@ -24,11 +25,16 @@ from app.constants.mods import Mods
 from app.objects.beatmap import Beatmap
 from app.objects.beatmap import ensure_local_osu_file
 from app.objects.clan import Clan
+from app.objects.match import MatchWinConditions
+from app.objects.match import MatchTeamTypes
+from app.objects.match import MatchTeams
 from app.objects.player import Player
+from app.objects.score import Grade
 from app.repositories import players as players_repo
 from app.repositories import scores as scores_repo
 from app.repositories import stats as stats_repo
 from app.usecases.performance import ScoreParams
+from app.objects.beatmap import BeatmapSet
 
 AVATARS_PATH = SystemPath.cwd() / ".data/avatars"
 BEATMAPS_PATH = SystemPath.cwd() / ".data/osu"
@@ -577,6 +583,113 @@ async def api_get_player_most_played(
             "maps": [dict(row) for row in rows],
         },
     )
+    
+@router.get("/get_match")
+async def api_get_match(
+    uid: int = Query(0, alias="id"),
+    limit: int = Query(25, ge=1, le=100),
+):
+    """Returns the match json."""
+    
+    match = await app.state.services.database.fetch_one(
+        f"SELECT id, name FROM multiplayer_matches WHERE id = {uid}"
+    )
+    if match is None:
+        return ORJSONResponse(
+            {
+                "status": "Match not found.",
+            },
+        )
+    match_name = dict(match)["name"]
+    
+    match = await app.state.services.database.fetch_all(
+        f"SELECT join_leave_event, close_event, change_host_event, match_maps, event_time FROM multiplayer_event WHERE match_id = {uid}"
+    )
+    data = [{}]
+    data += [dict(row) for row in match]
+    
+    for i, row in enumerate(data.copy()):
+        if i == 0:
+            continue # ignore first uninitialized value
+        if row["join_leave_event"] is not None:
+            event = await app.state.services.database.fetch_one(
+                f"SELECT player_id, player_name, is_join, event_time FROM multiplayer_join_leave_event WHERE id = {row['join_leave_event']}"
+            )
+            event = dict(event)
+            data[i] = {
+                "type": "player_join" if event["is_join"] else "player_leave",
+                "player_id": event["player_id"],
+                "player_name": event["player_name"],
+                "time": datetime.fromtimestamp(event["event_time"]).isoformat()
+            }
+            
+            if i == 1: # first join of the match means the match has been created
+                data[0] = {
+                    "type": "match_created",
+                    "name": match_name,
+                    "host_id": event["player_id"],
+                    "host_name": event["player_name"],
+                    "time": datetime.fromtimestamp(event["event_time"]).isoformat()
+                }
+            
+        elif row["close_event"] is not None:
+            event = await app.state.services.database.fetch_one(
+                f"SELECT event_time FROM multiplayer_close_lobby_event WHERE id = {row['close_event']}"
+            )
+            event = dict(event)
+            data[i] = {
+                "type": "lobby_close",
+                "time": datetime.fromtimestamp(event["event_time"]).isoformat()
+            }
+        elif row["change_host_event"] is not None:
+            event = await app.state.services.database.fetch_one(
+                f"SELECT old_host, old_host_name, new_host, new_host_name, event_time FROM multiplayer_change_host_event WHERE id = {row['change_host_event']}"
+            )
+            event = dict(event)
+            data[i] = {
+                "type": "change_host",
+                "old_player": event["old_host"],
+                "new_player": event["new_host"],
+                "old_player_name": event["old_host_name"],
+                "new_player_name": event["new_host_name"],
+                "time": datetime.fromtimestamp(event["event_time"]).isoformat()
+            }
+        elif row["match_maps"] is not None:
+            event = await app.state.services.database.fetch_one(
+                f"SELECT * FROM match_maps WHERE id = {row['match_maps']}"
+            )
+            event = dict(event)
+            del event["id"]
+            del event["match_id"]
+            event["type"] = "beatmap_play"
+            event["win_condition"] = MatchWinConditions(event["win_condition"]).name
+            event["gamemode"] = GameMode(event["gamemode"]).name
+            event["team_type"] = MatchTeamTypes(event["team_type"]).name
+            event["event_time"] = datetime.fromtimestamp(row["event_time"]).isoformat()
+            
+            events = await app.state.services.database.fetch_all(
+                f"SELECT * FROM match_plays WHERE match_map_id = {row['match_maps']}"
+            )
+            scores = [dict(row) for row in events]
+            for j, score in enumerate(scores.copy()):
+                del score["id"]
+                del score["match_map_id"]
+                del score["match_id"]
+                score["play_time"] = datetime.fromtimestamp(score["play_time"]).isoformat()
+                score["grade"] = Grade(score["grade"]).name
+                score["player_team"] = MatchTeams(score["player_team"]).name
+                score["used_mods"] = Mods(score["used_mods"]).__repr__()
+                scores[j] = score
+            
+            event["scores"] = scores
+            data[i] = event
+    
+    return ORJSONResponse(
+        {
+            "status": "success",
+            "match": data,
+        },
+    )
 
 
 @router.get("/get_map_info")
@@ -612,6 +725,8 @@ async def api_get_map_info(
 @router.get("/get_map_scores")
 async def api_get_map_scores(
     scope: Literal["recent", "best"],
+    sort: Literal["max_combo", "pp", "acc", "score", "play_time"] | None = None,
+    sort_order: Literal["ascending", "descending"] | None = None,
     map_id: int | None = Query(None, alias="id", ge=0, le=2_147_483_647),
     map_md5: str | None = Query(None, alias="md5", min_length=32, max_length=32),
     mods_arg: str | None = Query(None, alias="mods"),
@@ -671,7 +786,7 @@ async def api_get_map_scores(
         "SELECT s.map_md5, s.score, s.pp, s.acc, s.max_combo, s.mods, "
         "s.n300, s.n100, s.n50, s.nmiss, s.ngeki, s.nkatu, s.grade, s.status, "
         "s.mode, s.play_time, s.time_elapsed, s.userid, s.perfect, "
-        "u.name player_name, "
+        "u.name player_name, u.country, "
         "c.id clan_id, c.name clan_name, c.tag clan_tag "
         "FROM scores s "
         "INNER JOIN users u ON u.id = s.userid "
@@ -697,11 +812,19 @@ async def api_get_map_scores(
     # unlike /get_player_scores, we'll sort by score/pp depending
     # on the mode played, since we want to replicated leaderboards.
     if scope == "best":
-        sort = "pp" if mode >= GameMode.RELAX_OSU else "score"
+        if sort is None :
+            sort = "pp" if mode >= GameMode.RELAX_OSU else "score"
     else:  # recent
         sort = "play_time"
 
-    query.append(f"ORDER BY {sort} DESC LIMIT :limit")
+    if sort:
+        if sort_order == "ascending":
+            sort_order = "ASC"
+        else:
+            sort_order = "DESC"
+    else:
+        sort_order = "DESC"
+    query.append(f"ORDER BY {sort} {sort_order} LIMIT :limit")
     params["limit"] = limit
 
     rows = await app.state.services.database.fetch_all(" ".join(query), params)
@@ -712,6 +835,30 @@ async def api_get_map_scores(
             "scores": [dict(row) for row in rows],
         },
     )
+
+@router.get("/get_set_info")
+async def api_get_set_info(set_id: int | None = Query(None, alias="id", ge=3, le=2_147_483_647)):
+    if set_id is not None:
+        bmset = await BeatmapSet.from_bsid(set_id)
+    else:
+        return ORJSONResponse(
+            {"status": "Must provide parameter 'id'!"},
+            status_code=status.HTTP_400_BAD_REQUEST,
+        )
+
+    if not bmset:
+        return ORJSONResponse(
+            {"status": "Set not found."},
+            status_code=status.HTTP_404_NOT_FOUND,
+        )
+
+    return ORJSONResponse(
+        {
+            "status": "success",
+            "map": bmset.as_dict,
+        },
+    )
+
 
 
 @router.get("/get_score_info")
@@ -898,7 +1045,7 @@ async def api_get_match(
 async def api_get_global_leaderboard(
     sort: Literal["tscore", "rscore", "pp", "acc", "plays", "playtime"] = "pp",
     mode_arg: int = Query(0, alias="mode", ge=0, le=11),
-    limit: int = Query(50, ge=1, le=100),
+    limit: int = Query(500, ge=1, le=100),
     offset: int = Query(0, min=0, max=2_147_483_647),
     country: str | None = Query(None, min_length=2, max_length=2),
 ) -> Response:

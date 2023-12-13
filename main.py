@@ -18,6 +18,8 @@ __email__ = "josh@akatsuki.gg"
 __discord__ = "cmyui#0425"
 
 import os
+import locale
+locale.setlocale(locale.LC_ALL, 'pt_BR.UTF-8')
 
 # set working directory to the bancho/ directory.
 os.chdir(os.path.dirname(os.path.realpath(__file__)))
@@ -109,6 +111,7 @@ def main(argv: Sequence[str]) -> int:
             % app.settings.APP_HOST,
         ) from None
 
+    log("If this is your first time running this fork, register your account on the guweb website with the following key -> 7ee7ba5e-05ab-456a-b500-c9127a5faa42", Ansi.LYELLOW)
     # run the server indefinitely
     uvicorn.run(
         "app.api.init_api:asgi_app",

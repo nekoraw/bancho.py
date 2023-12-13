@@ -15,3 +15,5 @@ ext/nginx.conf
 tools/cf_records.txt
 /.db-data/
 /.redis-data/
+tools/temp
+tools/temp/*

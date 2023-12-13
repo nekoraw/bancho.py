@@ -7,7 +7,7 @@ from datetime import datetime as datetime
 from datetime import timedelta as timedelta
 from enum import IntEnum
 from enum import unique
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Union
 from typing import TypedDict
 
 import databases.core
@@ -21,6 +21,7 @@ from app.constants.mods import Mods
 from app.logging import Ansi
 from app.logging import log
 from app.objects.beatmap import Beatmap
+from app.objects.score import Score
 from app.utils import escape_enum
 from app.utils import pymysql_encode
 
@@ -41,6 +42,102 @@ __all__ = (
     "Match",
 )
 
+async def multiplayer_event(match_id: int, join_leave_event: int = None, close_event: int = None, change_host_event: int = None, match_maps: int = None):
+    query = f"""\
+            INSERT INTO multiplayer_event (match_id, join_leave_event, close_event, change_host_event, match_maps, event_time) 
+            VALUES (:match_id, :join_leave_event, :close_event, :change_host_event, :match_maps, UNIX_TIMESTAMP())
+    """
+    params = {
+        "match_id": match_id, 
+        "join_leave_event": join_leave_event,
+        "close_event": close_event,
+        "change_host_event": change_host_event,
+        "match_maps": match_maps
+    }
+    await app.state.services.database.execute(query, params)
+    
+async def multiplayer_join_leave_event(match: Match, player: Player, is_join: bool):
+    query = f"""\
+            INSERT INTO multiplayer_join_leave_event (match_id, player_id, player_name, is_join, event_time) 
+            VALUES (:match_id, :player_id, :player_name, :is_join, UNIX_TIMESTAMP())
+        """
+    params = {
+        "match_id": match.db_match_id, 
+        "player_id": player.id,
+        "player_name": player.name,
+        "is_join": is_join, 
+    }
+    return await app.state.services.database.execute(query, params)
+
+
+async def multiplayer_close_lobby_event(match: Match):
+    query = f"""\
+            INSERT INTO multiplayer_close_lobby_event (match_id, event_time) 
+            VALUES (:match_id, UNIX_TIMESTAMP())
+        """
+    params = {
+        "match_id": match.db_match_id, 
+    }
+    return await app.state.services.database.execute(query, params)
+
+async def multiplayer_change_host_event(match: Match, old_host: Player, new_host: Player):
+    query = f"""\
+            INSERT INTO multiplayer_change_host_event (match_id, event_time, old_host, old_host_name, new_host, new_host_name) 
+            VALUES (:match_id, UNIX_TIMESTAMP(), :old_host, :old_host_name, :new_host, :new_host_name)
+        """
+    params = {
+        "match_id": match.db_match_id, 
+        "old_host": old_host.id,
+        "old_host_name": old_host.name,
+        "new_host": new_host.id,
+        "new_host_name": new_host.name
+    }
+    return await app.state.services.database.execute(query, params)
+
+async def match_maps(match: Match, bmap: Beatmap):
+    query = f"""\
+            INSERT INTO match_maps (match_id, bmap_id, bmapset_id, map_md5, win_condition, gamemode, team_type) 
+            VALUES (:match_id, :bmap_id, :bmapset_id, :map_md5, :win_condition, :gamemode, :team_type)
+        """
+    params = {
+        "match_id": match.db_match_id, 
+        "bmap_id": bmap.id,
+        "bmapset_id": bmap.set_id,
+        "map_md5": bmap.md5,
+        "win_condition": match.win_condition,
+        "gamemode": match.mode,
+        "team_type": match.team_type
+    }
+    return await app.state.services.database.execute(query, params)
+
+async def match_plays(match_map_id: int, match: Match, player: Player, score: Score, team_color: int):
+    query = f"""\
+            INSERT INTO match_plays (match_id, match_map_id, player_id, player_name, player_country, player_team, score, max_combo, accuracy, pp, used_mods, play_time, n300, n100, n50, nmiss, ngeki, nkatu, grade, passed, perfect) 
+            VALUES (:match_id, :match_map_id, :player_id, :player_name, :player_country, :player_team, :score, :max_combo, :accuracy, :pp, :used_mods, UNIX_TIMESTAMP(), :n300, :n100, :n50, :nmiss, :ngeki, :nkatu, :grade, :passed, :perfect)
+        """
+    params = {
+        "match_id": match.db_match_id, 
+        "match_map_id": match_map_id,
+        "player_id": player.id,
+        "player_name": player.name,
+        "player_country": player.country,
+        "player_team": team_color,
+        "score": score.score,
+        "max_combo": score.max_combo,
+        "accuracy": score.acc,
+        "pp": score.pp,
+        "used_mods": score.mods,
+        "n300": score.n300, 
+        "n100": score.n100, 
+        "n50": score.n50, 
+        "nmiss": score.nmiss,
+        "ngeki": score.ngeki, 
+        "nkatu": score.nkatu, 
+        "grade": score.grade.value, 
+        "passed": score.passed, 
+        "perfect": score.perfect
+    }
+    return await app.state.services.database.execute(query, params)
 
 @unique
 @pymysql_encode(escape_enum)
@@ -217,8 +314,10 @@ class Match:
         freemods: bool,
         seed: int,
         chat_channel: Channel,
+        db_match_id: int = -1
     ) -> None:
         self.id = id
+        self.db_match_id = db_match_id
         self.name = name
         self.passwd = password
 
@@ -401,7 +500,8 @@ class Match:
     async def await_submissions(
         self,
         was_playing: Sequence[Slot],
-    ) -> tuple[dict[MatchTeams | Player, int], Sequence[Player]]:
+        save_to_mp_link: bool = False
+    ) -> tuple[dict[Union[MatchTeams, Player], int], Sequence[Player]]:
         """Await score submissions from all players in completed state."""
         scores: dict[MatchTeams | Player, int] = defaultdict(int)
         didnt_submit: list[Player] = []
@@ -419,10 +519,16 @@ class Match:
         if not bmap:
             # map isn't submitted
             return {}, ()
-
+        
+        log("started awaiting for subissions")
+        if save_to_mp_link:
+            recv_id = await match_maps(self, bmap)
+            await multiplayer_event(self.db_match_id, match_maps=recv_id)
+            
         for s in was_playing:
             # continue trying to fetch each player's
             # scores until they've all been submitted.
+            log(f"trying to fetch {s.player.name}'s score")
             while True:
                 assert s.player is not None
                 rc_score = s.player.recent_score
@@ -438,14 +544,17 @@ class Match:
                     and rc_score.bmap.md5 == self.map_md5
                     and rc_score.server_time > max_age
                 ):
+                    log(f"found {s.player.name}'s score")
                     # score found, add to our scores dict if != 0.
                     score: int = getattr(rc_score, win_cond)
                     if score:
                         key: MatchTeams | Player = s.player if ffa else s.team
                         scores[key] += score
-
+                        if save_to_mp_link:
+                            play_id = await match_plays(recv_id, self, s.player, rc_score, s.team)
                     break
 
+                log(f"failed to found {s.player.name}'s score")
                 # wait 0.5s and try again
                 await asyncio.sleep(0.5)
                 time_waited += 0.5
@@ -484,7 +593,7 @@ class Match:
         scores, didnt_submit = await self.await_submissions(was_playing)
 
         for player in didnt_submit:
-            self.chat.send_bot(f"{player} didn't submit a score (timeout: 10s).")
+            self.chat.send_bot(f"{player} não submeteu uma pontuação (timeout: 10s).")
 
         if scores:
             ffa = self.team_type in (
@@ -495,7 +604,7 @@ class Match:
             # all scores are equal, it was a tie.
             if len(scores) != 1 and len(set(scores.values())) == 1:
                 self.winners.append(None)
-                self.chat.send_bot("The point has ended in a tie!")
+                self.chat.send_bot("O ponto terminou em um empate!")
                 return None
 
             # Find the winner & increment their matchpoints.
@@ -594,12 +703,12 @@ class Match:
 
             if didnt_submit:
                 self.chat.send_bot(
-                    "If you'd like to perform a rematch, "
-                    "please use the `!mp rematch` command.",
+                    "Se você gostaria de uma revanche, "
+                    "por favor use o comando `!mp rematch`.",
                 )
 
             for line in msg:
                 self.chat.send_bot(line)
 
         else:
-            self.chat.send_bot("Scores could not be calculated.")
+            self.chat.send_bot("Não foi possível calcular as pontuações.")
