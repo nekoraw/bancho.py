@@ -589,6 +589,14 @@ class BeatmapSet:
     def url(self) -> str:
         """The online url for this beatmap set."""
         return f"https://osu.{app.settings.DOMAIN}/s/{self.id}"
+    
+    @property
+    def as_dict(self) -> dict[str, object]:
+        return {
+            "id": self.id,
+            "last_osuapi_check": self.last_osuapi_check,
+            "maps": [bmap.as_dict for bmap in self.maps]
+        }
 
     def any_beatmaps_have_official_leaderboards(self) -> bool:
         """Whether all the maps in the set have leaderboards on official servers."""
