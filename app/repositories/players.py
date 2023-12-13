@@ -90,8 +90,8 @@ async def create(
     email: str,
     pw_bcrypt: bytes,
     country: str,
-    registered_with_key
-) -> dict[str, Any]:
+    registered_with_key: str
+) -> Player:
     """Create a new player in the database."""
     query = f"""\
         INSERT INTO users (name, safe_name, email, pw_bcrypt, country, registered_with_key,  creation_time, latest_activity)

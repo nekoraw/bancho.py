@@ -42,7 +42,7 @@ __all__ = (
     "Match",
 )
 
-async def multiplayer_event(match_id: int, join_leave_event: int = None, close_event: int = None, change_host_event: int = None, match_maps: int = None):
+async def multiplayer_event(match_id: int, join_leave_event: int | None = None, close_event: int | None = None, change_host_event: int | None = None, match_maps: int | None = None) -> None:
     query = f"""\
             INSERT INTO multiplayer_event (match_id, join_leave_event, close_event, change_host_event, match_maps, event_time) 
             VALUES (:match_id, :join_leave_event, :close_event, :change_host_event, :match_maps, UNIX_TIMESTAMP())
@@ -56,7 +56,7 @@ async def multiplayer_event(match_id: int, join_leave_event: int = None, close_e
     }
     await app.state.services.database.execute(query, params)
     
-async def multiplayer_join_leave_event(match: Match, player: Player, is_join: bool):
+async def multiplayer_join_leave_event(match: Match, player: Player, is_join: bool) -> None:
     query = f"""\
             INSERT INTO multiplayer_join_leave_event (match_id, player_id, player_name, is_join, event_time) 
             VALUES (:match_id, :player_id, :player_name, :is_join, UNIX_TIMESTAMP())
@@ -70,7 +70,7 @@ async def multiplayer_join_leave_event(match: Match, player: Player, is_join: bo
     return await app.state.services.database.execute(query, params)
 
 
-async def multiplayer_close_lobby_event(match: Match):
+async def multiplayer_close_lobby_event(match: Match) -> None:
     query = f"""\
             INSERT INTO multiplayer_close_lobby_event (match_id, event_time) 
             VALUES (:match_id, UNIX_TIMESTAMP())
@@ -80,7 +80,7 @@ async def multiplayer_close_lobby_event(match: Match):
     }
     return await app.state.services.database.execute(query, params)
 
-async def multiplayer_change_host_event(match: Match, old_host: Player, new_host: Player):
+async def multiplayer_change_host_event(match: Match, old_host: Player, new_host: Player) -> None:
     query = f"""\
             INSERT INTO multiplayer_change_host_event (match_id, event_time, old_host, old_host_name, new_host, new_host_name) 
             VALUES (:match_id, UNIX_TIMESTAMP(), :old_host, :old_host_name, :new_host, :new_host_name)
@@ -94,7 +94,7 @@ async def multiplayer_change_host_event(match: Match, old_host: Player, new_host
     }
     return await app.state.services.database.execute(query, params)
 
-async def match_maps(match: Match, bmap: Beatmap):
+async def match_maps(match: Match, bmap: Beatmap) -> None:
     query = f"""\
             INSERT INTO match_maps (match_id, bmap_id, bmapset_id, map_md5, win_condition, gamemode, team_type) 
             VALUES (:match_id, :bmap_id, :bmapset_id, :map_md5, :win_condition, :gamemode, :team_type)
@@ -110,7 +110,7 @@ async def match_maps(match: Match, bmap: Beatmap):
     }
     return await app.state.services.database.execute(query, params)
 
-async def match_plays(match_map_id: int, match: Match, player: Player, score: Score, team_color: int):
+async def match_plays(match_map_id: int, match: Match, player: Player, score: Score, team_color: int) -> None:
     query = f"""\
             INSERT INTO match_plays (match_id, match_map_id, player_id, player_name, player_country, player_team, score, max_combo, accuracy, pp, used_mods, play_time, n300, n100, n50, nmiss, ngeki, nkatu, grade, passed, perfect) 
             VALUES (:match_id, :match_map_id, :player_id, :player_name, :player_country, :player_team, :score, :max_combo, :accuracy, :pp, :used_mods, UNIX_TIMESTAMP(), :n300, :n100, :n50, :nmiss, :ngeki, :nkatu, :grade, :passed, :perfect)
@@ -559,7 +559,7 @@ class Match:
                 await asyncio.sleep(0.5)
                 time_waited += 0.5
 
-                if time_waited > 10:
+                if time_waited > 18:
                     # inform the match this user didn't
                     # submit a score in time, and skip them.
                     didnt_submit.append(s.player)
