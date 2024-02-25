@@ -1,0 +1,57 @@
+#{
+#	debug
+#}
+
+# guweb domain
+https://takuji.nkrw.dev {
+	encode gzip
+	handle {
+		request_body {
+			max_size 15MB
+		}
+
+		reverse_proxy http://127.0.0.1:8000 {
+			header_down +Access-Control-Allow-Origin *
+		}
+	}
+
+	tls /certs/fullchain.pem /certs/privkey.pem
+}
+
+# bancho.py subdomains
+https://*.takuji.nkrw.dev {
+	encode gzip
+
+	@banchopy header_regexp host Host ^(?:c[e4]?|osu|b|api|web|users|ss|d|p|community|difficulty-rating)\.takuji\.nkrw\.dev$
+	handle @banchopy {
+		reverse_proxy * 127.0.0.1:8001 {
+			header_up X-Real-IP {remote_host}
+			header_down +Access-Control-Allow-Origin *
+		}
+	}
+
+	handle {
+		abort
+	}
+
+	tls /certs/fullchain.pem /certs/privkey.pem
+}
+
+# bancho.py assets
+https://assets.takuji.nkrw.dev {
+	encode gzip
+	root * /home/ubuntu/bancho.py/.data/assets
+	file_server
+
+	tls /certs/fullchain.pem /certs/privkey.pem
+}
+
+# bancho.py avatars
+https://a.takuji.nkrw.dev {
+	encode gzip
+	root * /home/ubuntu/bancho.py/.data/avatars
+	try_files {path} {path}.png {path}.jpg {path}.gif {path}.jpeg {path}.jfif /default.jpg =404
+
+	tls /certs/fullchain.pem /certs/privkey.pem
+}
+

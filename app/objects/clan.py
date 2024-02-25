@@ -1,10 +1,7 @@
 from __future__ import annotations
 
 from datetime import datetime
-from typing import Optional
 from typing import TYPE_CHECKING
-
-import databases.core
 
 import app.state
 from app.constants.privileges import ClanPrivileges
@@ -27,7 +24,7 @@ class Clan:
         tag: str,
         created_at: datetime,
         owner_id: int,
-        member_ids: Optional[set[int]] = None,
+        member_ids: set[int] | None = None,
     ) -> None:
         """A class representing one of bancho.py's clans."""
         self.id = id

@@ -4,8 +4,7 @@ verify_ssl = true
 name = "pypi"
 
 [packages]
-aiohttp = "*"
-aioredis = "*"
+async-timeout = "*"
 bcrypt = "*"
 datadog = "*"
 fastapi = "*"
@@ -19,18 +18,27 @@ uvicorn = "*"
 uvloop = "*"
 py3rijndael = "*"
 pytimeparse = "*"
+redis = "*"
 sqlalchemy = "1.4.41"
-databases = {extras = ["mysql"], version = "0.5.5"}
+databases = {extras = ["mysql"] }
 akatsuki-pp-py = "*"
 cryptography = "*"
+tenacity = "*"
+httpx = "*"
+py-cpuinfo = "*"
 
 [dev-packages]
 pytest = "*"
 pre-commit = "*"
 black = "*"
 reorder-python-imports = "*"
-mitmproxy = "*"
 mypy = "*"
+autoflake = "*"
+asgi-lifespan = "*"
+pytest-asyncio = "*"
+types-psutil = "*"
+types-pymysql = "*"
+types-requests = "*"
 
 [requires]
-python_version = "3.9"
+python_version = "3.11"
