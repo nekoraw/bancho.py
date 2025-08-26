@@ -1,53 +1,54 @@
 from __future__ import annotations
 
 import math
+from collections.abc import Iterable
 from dataclasses import dataclass
-from typing import Iterable
-from typing import Optional
 from typing import TypedDict
 
 from akatsuki_pp_py import Beatmap
 from akatsuki_pp_py import Calculator
 
+from app.constants.mods import Mods
+
 
 @dataclass
 class ScoreParams:
     mode: int
-    mods: Optional[int] = None
-    combo: Optional[int] = None
+    mods: int | None = None
+    combo: int | None = None
 
     # caller may pass either acc OR 300/100/50/geki/katu/miss
-    acc: Optional[float] = None
+    acc: float | None = None
 
-    n300: Optional[int] = None
-    n100: Optional[int] = None
-    n50: Optional[int] = None
-    ngeki: Optional[int] = None
-    nkatu: Optional[int] = None
-    nmiss: Optional[int] = None
+    n300: int | None = None
+    n100: int | None = None
+    n50: int | None = None
+    ngeki: int | None = None
+    nkatu: int | None = None
+    nmiss: int | None = None
 
 
 class PerformanceRating(TypedDict):
     pp: float
-    pp_acc: float
-    pp_aim: float
-    pp_speed: float
-    pp_flashlight: float
-    effective_miss_count: int
-    pp_difficulty: float
+    pp_acc: float | None
+    pp_aim: float | None
+    pp_speed: float | None
+    pp_flashlight: float | None
+    effective_miss_count: float | None
+    pp_difficulty: float | None
 
 
 class DifficultyRating(TypedDict):
     stars: float
-    aim: float
-    speed: float
-    flashlight: float
-    slider_factor: float
-    speed_note_count: float
-    stamina: float
-    color: float
-    rhythm: float
-    peak: float
+    aim: float | None
+    speed: float | None
+    flashlight: float | None
+    slider_factor: float | None
+    speed_note_count: float | None
+    stamina: float | None
+    color: float | None
+    rhythm: float | None
+    peak: float | None
 
 
 class PerformanceResult(TypedDict):
@@ -74,6 +75,11 @@ def calculate_performances(
         #     and score.nmiss is None
         # ):
         #     raise ValueError("Either acc OR 300/100/50/geki/katu/miss must be present")
+
+        # rosupp ignores NC and requires DT
+        if score.mods is not None:
+            if score.mods & Mods.NIGHTCORE:
+                score.mods |= Mods.DOUBLETIME
 
         calculator = Calculator(
             mode=score.mode,

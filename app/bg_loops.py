@@ -62,7 +62,7 @@ async def _remove_expired_donation_privileges(interval: int) -> None:
                 {"id": player.id},
             )
 
-            if player.online:
+            if player.is_online:
                 player.enqueue(
                     app.packets.notification("O seu supporter acabou."),
                 )

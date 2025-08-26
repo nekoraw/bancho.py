@@ -1,4 +1,4 @@
-#!/usr/bin/env python3.9
+#!/usr/bin/env python3.11
 from __future__ import annotations
 
 import argparse
@@ -6,20 +6,19 @@ import asyncio
 import math
 import os
 import sys
+from collections.abc import Awaitable
+from collections.abc import Iterator
+from collections.abc import Sequence
 from dataclasses import dataclass
 from dataclasses import field
 from pathlib import Path
 from typing import Any
-from typing import Awaitable
-from typing import Iterator
-from typing import Optional
-from typing import Sequence
+from typing import TypeVar
 
-import aiohttp
-import aioredis
 import databases
 from akatsuki_pp_py import Beatmap
 from akatsuki_pp_py import Calculator
+from redis import asyncio as aioredis
 
 sys.path.insert(0, os.path.abspath(os.pardir))
 os.chdir(os.path.abspath(os.pardir))
@@ -35,6 +34,9 @@ except ModuleNotFoundError:
     print("\x1b[;91mMust run from tools/ directory\x1b[m")
     raise
 
+T = TypeVar("T")
+
+
 DEBUG = False
 BEATMAPS_PATH = Path.cwd() / ".data/osu"
 
@@ -46,7 +48,7 @@ class Context:
     beatmaps: dict[int, Beatmap] = field(default_factory=dict)
 
 
-def divide_chunks(values: list, n: int) -> Iterator[list]:
+def divide_chunks(values: list[T], n: int) -> Iterator[list[T]]:
     for i in range(0, len(values), n):
         yield values[i : i + n]
 
@@ -75,7 +77,7 @@ async def recalculate_score(
     )
     attrs = calculator.performance(beatmap)
 
-    new_pp: float = attrs.pp  # type: ignore
+    new_pp: float = attrs.pp
     if math.isnan(new_pp) or math.isinf(new_pp):
         new_pp = 0.0
 
@@ -207,14 +209,28 @@ async def recalculate_mode_scores(mode: GameMode, ctx: Context) -> None:
         await process_score_chunk(score_chunk, ctx)
 
 
-async def main(argv: Optional[Sequence[str]] = None) -> int:
+async def main(argv: Sequence[str] | None = None) -> int:
     argv = argv if argv is not None else sys.argv[1:]
     if len(argv) == 0:
         argv = ["--help"]
 
-    parser = argparse.ArgumentParser(description="Recalculate performance for scores")
+    parser = argparse.ArgumentParser(
+        description="Recalculate performance for scores and/or stats",
+    )
 
     parser.add_argument("-d", "--debug", action="store_true")
+    parser.add_argument(
+        "--scores",
+        description="Recalculate scores",
+        action="store_true",
+        default=True,
+    )
+    parser.add_argument(
+        "--stats",
+        description="Recalculate stats",
+        action="store_true",
+        default=True,
+    )
 
     parser.add_argument(
         "-m",
@@ -229,8 +245,6 @@ async def main(argv: Optional[Sequence[str]] = None) -> int:
     global DEBUG
     DEBUG = args.debug
 
-    app.state.services.http_client = aiohttp.ClientSession()
-
     db = databases.Database(app.settings.DB_DSN)
     await db.connect()
 
@@ -241,10 +255,13 @@ async def main(argv: Optional[Sequence[str]] = None) -> int:
     for mode in args.mode:
         mode = GameMode(int(mode))
 
-        await recalculate_mode_scores(mode, ctx)
-        await recalculate_mode_users(mode, ctx)
+        if args.scores:
+            await recalculate_mode_scores(mode, ctx)
 
-    await app.state.services.http_client.close()
+        if args.stats:
+            await recalculate_mode_users(mode, ctx)
+
+    await app.state.services.http_client.aclose()
     await db.disconnect()
     await redis.close()
 

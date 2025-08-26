@@ -1,4 +1,4 @@
-#!/usr/bin/env python3.9
+#!/usr/bin/env python3.11
 """main.py - a user-friendly, safe wrapper around bancho.py's runtime
 
 bancho.py is an in-progress osu! server implementation for developers of all levels
@@ -27,8 +27,7 @@ os.chdir(os.path.dirname(os.path.realpath(__file__)))
 import argparse
 import logging
 import sys
-from typing import Sequence
-
+from collections.abc import Sequence
 import uvicorn
 
 import app.utils
@@ -78,41 +77,38 @@ def main(argv: Sequence[str]) -> int:
 
     # the server supports both inet and unix sockets.
 
+    uds = None
+    host = None
+    port = None
+
     if (
-        app.utils.is_valid_inet_address(app.settings.SERVER_ADDR)
-        and app.settings.SERVER_PORT is not None
+        app.utils.is_valid_inet_address(app.settings.APP_HOST)
+        and app.settings.APP_PORT is not None
     ):
-        server_arguments = {
-            "host": app.settings.SERVER_ADDR,
-            "port": app.settings.SERVER_PORT,
-        }
+        host = app.settings.APP_HOST
+        port = app.settings.APP_PORT
     elif (
-        app.utils.is_valid_unix_address(app.settings.SERVER_ADDR)
-        and app.settings.SERVER_PORT is None
+        app.utils.is_valid_unix_address(app.settings.APP_HOST)
+        and app.settings.APP_PORT is None
     ):
-        server_arguments = {
-            "uds": app.settings.SERVER_ADDR,
-        }
+        uds = app.settings.APP_HOST
 
         # make sure the socket file does not exist on disk and can be bound
         # (uvicorn currently does not do this for us, and will raise an exc)
-        if os.path.exists(app.settings.SERVER_ADDR):
-            if (
-                app.utils.processes_listening_on_unix_socket(app.settings.SERVER_ADDR)
-                != 0
-            ):
+        if os.path.exists(app.settings.APP_HOST):
+            if app.utils.processes_listening_on_unix_socket(app.settings.APP_HOST) != 0:
                 log(
-                    f"There are other processes listening on {app.settings.SERVER_ADDR}.\n"
+                    f"There are other processes listening on {app.settings.APP_HOST}.\n"
                     f"If you've lost it, bancho.py can be killed gracefully with SIGINT.",
                     Ansi.LRED,
                 )
                 return 1
             else:
-                os.remove(app.settings.SERVER_ADDR)
+                os.remove(app.settings.APP_HOST)
     else:
         raise ValueError(
             "%r does not appear to be an IPv4, IPv6 or Unix address"
-            % app.settings.SERVER_ADDR,
+            % app.settings.APP_HOST,
         ) from None
 
     log("If this is your first time running this fork, register your account on the guweb website with the following key -> 7ee7ba5e-05ab-456a-b500-c9127a5faa42", Ansi.LYELLOW)
@@ -127,7 +123,9 @@ def main(argv: Sequence[str]) -> int:
         #       but i would prefer Bancho-Version to keep
         #       with standards. perhaps look into this.
         headers=[("bancho-version", app.settings.VERSION)],
-        **server_arguments,
+        uds=uds,
+        host=host or "127.0.0.1",  # uvicorn defaults
+        port=port or 8000,  # uvicorn defaults
     )
 
     return 0

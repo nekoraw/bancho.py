@@ -2,12 +2,10 @@
 # in a lot of these classes; needs refactor.
 from __future__ import annotations
 
-from typing import Iterable
-from typing import Iterator
-from typing import Optional
-from typing import overload
-from typing import Sequence
-from typing import Union
+from collections.abc import Iterable
+from collections.abc import Iterator
+from collections.abc import Sequence
+from typing import Any
 
 import databases.core
 
@@ -49,7 +47,7 @@ class Channels(list[Channel]):
     def __iter__(self) -> Iterator[Channel]:
         return super().__iter__()
 
-    def __contains__(self, o: Union[Channel, str]) -> bool:
+    def __contains__(self, o: object) -> bool:
         """Check whether internal list contains `o`."""
         # Allow string to be passed to compare vs. name.
         if isinstance(o, str):
@@ -57,36 +55,13 @@ class Channels(list[Channel]):
         else:
             return super().__contains__(o)
 
-    @overload
-    def __getitem__(self, index: int) -> Channel:
-        ...
-
-    @overload
-    def __getitem__(self, index: str) -> Channel:
-        ...
-
-    @overload
-    def __getitem__(self, index: slice) -> list[Channel]:
-        ...
-
-    def __getitem__(
-        self,
-        index: Union[int, slice, str],
-    ) -> Union[Channel, list[Channel]]:
-        # XXX: can be either a string (to get by name),
-        # or a slice, for indexing the internal array.
-        if isinstance(index, str):
-            return self.get_by_name(index)  # type: ignore
-        else:
-            return super().__getitem__(index)
-
     def __repr__(self) -> str:
         # XXX: we use the "real" name, aka
         # #multi_1 instead of #multiplayer
         # #spect_1 instead of #spectator.
         return f'[{", ".join(c._name for c in self)}]'
 
-    def get_by_name(self, name: str) -> Optional[Channel]:
+    def get_by_name(self, name: str) -> Channel | None:
         """Get a channel from the list by `name`."""
         for channel in self:
             if channel._name == name:
@@ -130,19 +105,20 @@ class Channels(list[Channel]):
             )
 
 
-class Matches(list[Optional[Match]]):
+class Matches(list[Match | None]):
     """The currently active multiplayer matches on the server."""
 
     def __init__(self) -> None:
-        super().__init__([None] * app.settings.MAX_MATCHES)
+        MAX_MATCHES = 64  # TODO: refactor this out of existence
+        super().__init__([None] * MAX_MATCHES)
 
-    def __iter__(self) -> Iterator[Optional[Match]]:
+    def __iter__(self) -> Iterator[Match | None]:
         return super().__iter__()
 
     def __repr__(self) -> str:
         return f'[{", ".join(match.name for match in self if match)}]'
 
-    def get_free(self) -> Optional[int]:
+    def get_free(self) -> int | None:
         """Return the first free match id from `self`."""
         for idx, match in enumerate(self):
             if match is None:
@@ -150,25 +126,7 @@ class Matches(list[Optional[Match]]):
 
         return None
 
-    def append(self, match: Match) -> bool:
-        """Append `match` to the list."""
-        free = self.get_free()
-        if free is not None:
-            # set the id of the match to the lowest available free.
-            match.id = free
-            self[free] = match
-
-            if app.settings.DEBUG:
-                log(f"{match} added to matches list.")
-
-            return True
-        else:
-            log(f"Match list is full! Could not add {match}.")
-            return False
-
-    # TODO: extend
-
-    def remove(self, match: Match) -> None:
+    def remove(self, match: Match | None) -> None:
         """Remove `match` from the list."""
         for i, _m in enumerate(self):
             if match is _m:
@@ -182,13 +140,13 @@ class Matches(list[Optional[Match]]):
 class Players(list[Player]):
     """The currently active players on the server."""
 
-    def __init__(self, *args, **kwargs):
+    def __init__(self, *args: Any, **kwargs: Any) -> None:
         super().__init__(*args, **kwargs)
 
     def __iter__(self) -> Iterator[Player]:
         return super().__iter__()
 
-    def __contains__(self, player: Union[Player, str]) -> bool:
+    def __contains__(self, player: object) -> bool:
         # allow us to either pass in the player
         # obj, or the player name as a string.
         if isinstance(player, str):
@@ -227,10 +185,10 @@ class Players(list[Player]):
 
     def get(
         self,
-        token: Optional[str] = None,
-        id: Optional[int] = None,
-        name: Optional[str] = None,
-    ) -> Optional[Player]:
+        token: str | None = None,
+        id: int | None = None,
+        name: str | None = None,
+    ) -> Player | None:
         """Get a player by token, id, or name from cache."""
         for player in self:
             if token is not None:
@@ -247,9 +205,9 @@ class Players(list[Player]):
 
     async def get_sql(
         self,
-        id: Optional[int] = None,
-        name: Optional[str] = None,
-    ) -> Optional[Player]:
+        id: int | None = None,
+        name: str | None = None,
+    ) -> Player | None:
         """Get a player by token, id, or name from sql."""
         # try to get from sql.
         player = await players_repo.fetch_one(
@@ -260,32 +218,37 @@ class Players(list[Player]):
         if player is None:
             return None
 
-        # encode pw_bcrypt from str -> bytes.
-        player["pw_bcrypt"] = player["pw_bcrypt"].encode()
-
+        clan: Clan | None = None
+        clan_priv: ClanPrivileges | None = None
         if player["clan_id"] != 0:
-            player["clan"] = app.state.sessions.clans.get(id=player["clan_id"])
-            player["clan_priv"] = ClanPrivileges(player["clan_priv"])
-        else:
-            player["clan"] = player["clan_priv"] = None
+            clan = app.state.sessions.clans.get(id=player["clan_id"])
+            clan_priv = ClanPrivileges(player["clan_priv"])
 
-        # country from acronym to {acronym, numeric}
-        player["geoloc"] = {
-            "latitude": -10.8818447,  # TODO
-            "longitude": -51.6441138,
-            "country": {
-                "acronym": "br",
-                "numeric": 31,
+        return Player(
+            id=player["id"],
+            name=player["name"],
+            pw_bcrypt=player["pw_bcrypt"].encode(),
+            priv=Privileges(player["priv"]),
+            clan=clan,
+            clan_priv=clan_priv,
+            geoloc={
+                "latitude": -10.8818447,
+                "longitude": -51.6441138,
+                "country": {
+                    "acronym": "br",
+                    "numeric": 31,
+                },
             },
-        }
-
-        return Player(**player, token="")
+            silence_end=player["silence_end"],
+            donor_end=player["donor_end"],
+            api_key=player["api_key"],
+        )
 
     async def from_cache_or_sql(
         self,
-        id: Optional[int] = None,
-        name: Optional[str] = None,
-    ) -> Optional[Player]:
+        id: int | None = None,
+        name: str | None = None,
+    ) -> Player | None:
         """Try to get player from cache, or sql as fallback."""
         player = self.get(id=id, name=name)
         if player is not None:
@@ -301,7 +264,7 @@ class Players(list[Player]):
         name: str,
         pw_md5: str,
         sql: bool = False,
-    ) -> Optional[Player]:
+    ) -> Player | None:
         """Return a player with a given name & pw_md5, from cache or sql."""
         player = self.get(name=name)
         if not player:
@@ -344,33 +307,11 @@ class MapPools(list[MapPool]):
     def __iter__(self) -> Iterator[MapPool]:
         return super().__iter__()
 
-    @overload
-    def __getitem__(self, index: int) -> MapPool:
-        ...
-
-    @overload
-    def __getitem__(self, index: str) -> MapPool:
-        ...
-
-    @overload
-    def __getitem__(self, index: slice) -> list[MapPool]:
-        ...
-
-    def __getitem__(
-        self,
-        index: Union[int, slice, str],
-    ) -> Union[MapPool, list[MapPool]]:
-        """Allow slicing by either a string (for name), or slice."""
-        if isinstance(index, str):
-            return self.get_by_name(index)  # type: ignore
-        else:
-            return super().__getitem__(index)
-
     def get(
         self,
-        id: Optional[int] = None,
-        name: Optional[str] = None,
-    ) -> Optional[MapPool]:
+        id: int | None = None,
+        name: str | None = None,
+    ) -> MapPool | None:
         """Get a mappool by id, or name from cache."""
         for player in self:
             if id is not None:
@@ -382,7 +323,7 @@ class MapPools(list[MapPool]):
 
         return None
 
-    def __contains__(self, o: Union[MapPool, str]) -> bool:
+    def __contains__(self, o: object) -> bool:
         """Check whether internal list contains `o`."""
         # Allow string to be passed to compare vs. name.
         if isinstance(o, str):
@@ -390,7 +331,7 @@ class MapPools(list[MapPool]):
         else:
             return o in self
 
-    def get_by_name(self, name: str) -> Optional[MapPool]:
+    def get_by_name(self, name: str) -> MapPool | None:
         """Get a pool from the list by `name`."""
         for player in self:
             if player.name == name:
@@ -445,26 +386,7 @@ class Clans(list[Clan]):
     def __iter__(self) -> Iterator[Clan]:
         return super().__iter__()
 
-    @overload
-    def __getitem__(self, index: int) -> Clan:
-        ...
-
-    @overload
-    def __getitem__(self, index: str) -> Clan:
-        ...
-
-    @overload
-    def __getitem__(self, index: slice) -> list[Clan]:
-        ...
-
-    def __getitem__(self, index: Union[int, str, slice]):
-        """Allow slicing by either a string (for name), or slice."""
-        if isinstance(index, str):
-            return self.get(name=index)
-        else:
-            return super().__getitem__(index)
-
-    def __contains__(self, o: Union[Clan, str]) -> bool:
+    def __contains__(self, o: object) -> bool:
         """Check whether internal list contains `o`."""
         # Allow string to be passed to compare vs. name.
         if isinstance(o, str):
@@ -474,10 +396,10 @@ class Clans(list[Clan]):
 
     def get(
         self,
-        id: Optional[int] = None,
-        name: Optional[str] = None,
-        tag: Optional[str] = None,
-    ) -> Optional[Clan]:
+        id: int | None = None,
+        name: str | None = None,
+        tag: str | None = None,
+    ) -> Clan | None:
         """Get a clan by name, tag, or id."""
         for clan in self:
             if id is not None:
@@ -549,20 +471,6 @@ async def initialize_ram_caches(db_conn: databases.core.Connection) -> None:
         bot_client=True,
     )
     app.state.sessions.players.append(app.state.sessions.bot)
-
-    # global achievements (sorted by vn gamemodes)
-    for row in await achievements_repo.fetch_many():
-        achievement = Achievement(
-            id=row["id"],
-            file=row["file"],
-            name=row["name"],
-            desc=row["desc"],
-            # NOTE: achievement conditions are stored as stringified python
-            # expressions in the database to allow for extensive customizability.
-            cond=eval(f'lambda score, mode_vn: {row.pop("cond")}'),
-        )
-
-        app.state.sessions.achievements.append(achievement)
 
     # static api keys
     app.state.sessions.api_keys = {

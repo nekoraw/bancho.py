@@ -1,13 +1,12 @@
 from __future__ import annotations
 
 from typing import Any
+from typing import cast
 from typing import Generic
 from typing import Literal
-from typing import Optional
 from typing import TypeVar
-from typing import Union
 
-from pydantic.generics import GenericModel
+from pydantic import BaseModel
 
 from app.api.v2.common import json
 
@@ -15,35 +14,36 @@ from app.api.v2.common import json
 T = TypeVar("T")
 
 
-class Success(GenericModel, Generic[T]):
+class Success(BaseModel, Generic[T]):
     status: Literal["success"]
     data: T
     meta: dict[str, Any]
 
 
 def success(
-    content: Any,
+    content: T,
     status_code: int = 200,
-    headers: Optional[dict[str, Any]] = None,
-    meta: Optional[dict[str, Any]] = None,
-) -> Any:
+    headers: dict[str, Any] | None = None,
+    meta: dict[str, Any] | None = None,
+) -> Success[T]:
     if meta is None:
         meta = {}
     data = {"status": "success", "data": content, "meta": meta}
-    return json.ORJSONResponse(data, status_code, headers)
+    # XXX:HACK to make typing work
+    return cast(Success[T], json.ORJSONResponse(data, status_code, headers))
 
 
-class ErrorResponse(GenericModel, Generic[T]):
+class Failure(BaseModel):
     status: Literal["error"]
-    error: T
-    message: str
+    error: str
 
 
 def failure(
     # TODO: error code
     message: str,
     status_code: int = 400,
-    headers: Union[dict, None] = None,
-) -> Any:
+    headers: dict[str, Any] | None = None,
+) -> Failure:
     data = {"status": "error", "error": message}
-    return json.ORJSONResponse(data, status_code, headers)
+    # XXX:HACK to make typing work
+    return cast(Failure, json.ORJSONResponse(data, status_code, headers))

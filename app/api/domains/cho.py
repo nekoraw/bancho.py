@@ -5,13 +5,12 @@ import asyncio
 import re
 import struct
 import time
+from collections.abc import Callable
+from collections.abc import Mapping
 from datetime import date
 from datetime import datetime
 from pathlib import Path
-from typing import Callable
 from typing import Literal
-from typing import Mapping
-from typing import Optional
 from typing import TypedDict
 
 import bcrypt
@@ -42,6 +41,7 @@ from app.logging import magnitude_fmt_time
 from app.objects.beatmap import Beatmap
 from app.objects.beatmap import ensure_local_osu_file
 from app.objects.channel import Channel
+from app.objects.clan import Clan
 from app.objects.match import Match
 from app.objects.match import MatchTeams
 from app.objects.match import MatchTeamTypes
@@ -49,9 +49,6 @@ from app.objects.match import MatchWinConditions
 from app.objects.match import Slot
 from app.objects.match import SlotStatus
 from app.objects.match import multiplayer_change_host_event, multiplayer_close_lobby_event, multiplayer_event, multiplayer_join_leave_event
-from app.objects.menu import Menu
-from app.objects.menu import MenuCommands
-from app.objects.menu import MenuFunction
 from app.objects.player import Action
 from app.objects.player import ClientDetails
 from app.objects.player import LeaveMatchEnum
@@ -62,6 +59,7 @@ from app.objects.player import PresenceFilter
 from app.packets import BanchoPacketReader
 from app.packets import BasePacket
 from app.packets import ClientPackets
+from app.repositories import ingame_logins as logins_repo
 from app.repositories import players as players_repo
 from app.state import services
 from app.usecases.performance import ScoreParams
@@ -72,7 +70,6 @@ BEATMAPS_PATH = Path.cwd() / ".data/osu"
 
 BASE_DOMAIN = app.settings.DOMAIN
 
-# TODO: dear god
 NOW_PLAYING_RGX = re.compile(
     r"^\x01ACTION is (?:playing|editing|watching|listening to) "
     rf"\[https://osu\.(?:{re.escape(BASE_DOMAIN)}|ppy\.sh)/beatmapsets/(?P<sid>\d{{1,10}})#/?(?:osu|taiko|fruits|mania)?/(?P<bid>\d{{1,10}})/? .+\]"
@@ -84,7 +81,7 @@ router = APIRouter(tags=["Bancho API"])
 
 
 @router.get("/")
-async def bancho_http_handler():
+async def bancho_http_handler() -> Response:
     """Handle a request from a web browser."""
     new_line = "\n"
     matches = [m for m in app.state.sessions.matches if m is not None]
@@ -110,7 +107,7 @@ async def bancho_http_handler():
 
 
 @router.get("/online")
-async def bancho_list_user():
+async def bancho_view_online_users() -> Response:
     """see who's online"""
     new_line = "\n"
 
@@ -133,7 +130,7 @@ bots:
 
 
 @router.get("/matches")
-async def bancho_list_user():
+async def bancho_view_matches() -> Response:
     """ongoing matches"""
     new_line = "\n"
 
@@ -172,9 +169,9 @@ matches:
 @router.post("/")
 async def bancho_handler(
     request: Request,
-    osu_token: Optional[str] = Header(None),
+    osu_token: str | None = Header(None),
     user_agent: Literal["osu!"] = Header(...),
-):
+) -> Response:
     ip = app.state.services.ip_resolver.get_ip(request.headers)
 
     if osu_token is None:
@@ -321,7 +318,7 @@ class SendMessage(BasePacket):
             else:
                 return
 
-            t_chan = app.state.sessions.channels[f"#spec_{spec_id}"]
+            t_chan = app.state.sessions.channels.get_by_name(f"#spec_{spec_id}")
         elif recipient == "#multiplayer":
             if not player.match:
                 # they're not in a match?
@@ -329,7 +326,7 @@ class SendMessage(BasePacket):
 
             t_chan = player.match.chat
         else:
-            t_chan = app.state.sessions.channels[recipient]
+            t_chan = app.state.sessions.channels.get_by_name(recipient)
 
         if not t_chan:
             log(f"{player} wrote to non-existent {recipient}.", Ansi.LYELLOW)
@@ -579,22 +576,25 @@ async def login(
 
         allowed_client_versions = set()
 
-        async with services.http_client.get(
+        # TODO: put this behind a layer of abstraction
+        #       for better handling of the error cases
+        response = await services.http_client.get(
             OSU_API_V2_CHANGELOG_URL,
             params={"stream": osu_client_stream},
-        ) as resp:
-            for build in (await resp.json())["builds"]:
-                version = date(
-                    int(build["version"][0:4]),
-                    int(build["version"][4:6]),
-                    int(build["version"][6:8]),
-                )
-                allowed_client_versions.add(version)
+        )
+        response.raise_for_status()
+        for build in response.json()["builds"]:
+            version = date(
+                int(build["version"][0:4]),
+                int(build["version"][4:6]),
+                int(build["version"][6:8]),
+            )
+            allowed_client_versions.add(version)
 
-                if any(entry["major"] for entry in build["changelog_entries"]):
-                    # this build is a major iteration to the client
-                    # don't allow anything older than this
-                    break
+            if any(entry["major"] for entry in build["changelog_entries"]):
+                # this build is a major iteration to the client
+                # don't allow anything older than this
+                break
 
         if osu_version.date not in allowed_client_versions:
             return {
@@ -620,27 +620,23 @@ async def login(
 
     login_time = time.time()
 
-    # TODO: improve tournament client support
+    # disallow multiple sessions from a single user
+    # with the exception of tourney spectator clients
     player = app.state.sessions.players.get(name=login_data["username"])
-    if player:
-        # player is already logged in - allow this only for tournament clients
-
-        if not (osu_version.stream == "tourney" or player.tourney_client):
-            # neither session is a tournament client, disallow
-
-            if (login_time - player.last_recv_time) > 10:
-                # let this session overrule the existing one
-                # (this is made to help prevent user ghosting)
-                player.logout()
-            else:
-                # current session is still active, disallow
-                return {
-                    "osu_token": "user-ghosted",
-                    "response_body": (
-                        app.packets.user_id(-1)
-                        + app.packets.notification("Usuário já está conectado")
-                    ),
-                }
+    if player and osu_version.stream != "tourney":
+        # check if the existing session is still active
+        if (login_time - player.last_recv_time) < 10:
+            return {
+                "osu_token": "user-already-logged-in",
+                "response_body": (
+                    app.packets.user_id(-1)
+                    + app.packets.notification("Usuário já está conectado.")
+                ),
+            }
+        else:
+            # session is not active; replace it
+            player.logout()
+            del player
 
     user_info = await players_repo.fetch_one(
         name=login_data["username"],
@@ -657,8 +653,6 @@ async def login(
             ),
         }
 
-    user_info = dict(user_info)  # make a mutable copy
-
     if osu_version.stream == "tourney" and not (
         user_info["priv"] & Privileges.DONATOR
         and user_info["priv"] & Privileges.UNRESTRICTED
@@ -672,7 +666,6 @@ async def login(
     # get our bcrypt cache
     bcrypt_cache = app.state.cache.bcrypt
     pw_bcrypt = user_info["pw_bcrypt"].encode()
-    user_info["pw_bcrypt"] = pw_bcrypt
 
     # check credentials against db. algorithms like these are intentionally
     # designed to be slow; we'll cache the results to speed up subsequent logins.
@@ -699,16 +692,11 @@ async def login(
 
     """ login credentials verified """
 
-    await db_conn.execute(
-        "INSERT INTO ingame_logins "
-        "(userid, ip, osu_ver, osu_stream, datetime) "
-        "VALUES (:id, :ip, :osu_ver, :osu_stream, NOW())",
-        {
-            "id": user_info["id"],
-            "ip": str(ip),
-            "osu_ver": osu_version.date,
-            "osu_stream": osu_version.stream,
-        },
+    await logins_repo.create(
+        user_id=user_info["id"],
+        ip=str(ip),
+        osu_ver=osu_version.date,
+        osu_stream=osu_version.stream,
     )
 
     await db_conn.execute(
@@ -776,13 +764,11 @@ async def login(
     """ All checks passed, player is safe to login """
 
     # get clan & clan priv if we're in a clan
+    clan: Clan | None = None
+    clan_priv: ClanPrivileges | None = None
     if user_info["clan_id"] != 0:
-        clan = app.state.sessions.clans.get(id=user_info.pop("clan_id"))
-        clan_priv = ClanPrivileges(user_info.pop("clan_priv"))
-    else:
-        del user_info["clan_id"]
-        del user_info["clan_priv"]
-        clan = clan_priv = None
+        clan = app.state.sessions.clans.get(id=user_info["clan_id"])
+        clan_priv = ClanPrivileges(user_info["clan_priv"])
 
     db_country = user_info.get("country")
 
@@ -799,8 +785,6 @@ async def login(
             ),
         }
 
-    user_info["geoloc"] = geoloc
-
     if db_country == "xx":
         # bugfix for old bancho.py versions when
         # country wasn't stored on registration.
@@ -809,7 +793,7 @@ async def login(
         await db_conn.execute(
             "UPDATE users SET country = :country WHERE id = :user_id",
             {
-                "country": user_info["geoloc"]["country"]["acronym"],
+                "country": geoloc["country"]["acronym"],
                 "user_id": user_info["id"],
             },
         )
@@ -825,14 +809,21 @@ async def login(
     )
 
     player = Player(
-        **user_info,  # {id, name, priv, pw_bcrypt, silence_end, api_key, geoloc?}
-        utc_offset=login_data["utc_offset"],
-        pm_private=login_data["pm_private"],
-        login_time=login_time,
+        id=user_info["id"],
+        name=user_info["name"],
+        priv=user_info["priv"],
+        pw_bcrypt=pw_bcrypt,
         clan=clan,
         clan_priv=clan_priv,
-        tourney_client=osu_version.stream == "tourney",
+        geoloc=geoloc,
+        utc_offset=login_data["utc_offset"],
+        pm_private=login_data["pm_private"],
+        silence_end=user_info["silence_end"],
+        donor_end=user_info["donor_end"],
         client_details=client_details,
+        login_time=login_time,
+        tourney_client=osu_version.stream == "tourney",
+        api_key=user_info["api_key"],
     )
 
     data = bytearray(app.packets.protocol_version(19))
@@ -880,7 +871,6 @@ async def login(
 
     # fetch some of the player's
     # information from sql to be cached.
-    await player.achievements_from_sql(db_conn)
     await player.stats_from_sql_full(db_conn)
     await player.relationships_from_sql(db_conn)
 
@@ -1178,7 +1168,7 @@ class SendPrivateMessage(BasePacket):
 
         if target is not app.state.sessions.bot:
             # target is not bot, send the message normally if online
-            if target.online:
+            if target.is_online:
                 target.send(msg, sender=player)
             else:
                 # inform user they're offline, but
@@ -1360,7 +1350,7 @@ class MatchCreate(BasePacket):
             map_md5=self.match_data.map_md5,
             # TODO: validate no security hole exists
             host_id=self.match_data.host_id,
-            mode=self.match_data.mode,
+            mode=GameMode(self.match_data.mode),
             mods=Mods(self.match_data.mods),
             win_condition=MatchWinConditions(self.match_data.win_condition),
             team_type=MatchTeamTypes(self.match_data.team_type),
@@ -1390,36 +1380,6 @@ class MatchCreate(BasePacket):
         log(f"{player} created a new multiplayer match.")
 
 
-async def execute_menu_option(player: Player, key: int) -> None:
-    if key not in player.current_menu.options:
-        return
-
-    # this is one of their menu options, execute it.
-    cmd, data = player.current_menu.options[key]
-
-    if app.settings.DEBUG:
-        print(f"\x1b[0;95m{cmd!r}\x1b[0m {data}")
-
-    if cmd == MenuCommands.Reset:
-        # go back to the main menu
-        player.current_menu = player.previous_menus[0]
-        player.previous_menus.clear()
-    elif cmd == MenuCommands.Back:
-        # return one menu back
-        player.current_menu = player.previous_menus.pop()
-        player.send_current_menu()
-    elif cmd == MenuCommands.Advance:
-        # advance to a new menu
-        assert isinstance(data, Menu)
-        player.previous_menus.append(player.current_menu)
-        player.current_menu = data
-        player.send_current_menu()
-    elif cmd == MenuCommands.Execute:
-        # execute a function on the current menu
-        assert isinstance(data, MenuFunction)
-        await data.callback(player)
-
-
 @register(ClientPackets.JOIN_MATCH)
 class MatchJoin(BasePacket):
     def __init__(self, reader: BanchoPacketReader) -> None:
@@ -1427,16 +1387,6 @@ class MatchJoin(BasePacket):
         self.match_passwd = reader.read_string()
 
     async def handle(self, player: Player) -> None:
-        is_menu_request = self.match_id >= 64  # max multi matches
-
-        if is_menu_request or self.match_id < 0:
-            if is_menu_request:
-                # NOTE: this function is unrelated to mp.
-                await execute_menu_option(player, self.match_id)
-
-            player.enqueue(app.packets.match_join_fail())
-            return
-
         match = app.state.sessions.matches[self.match_id]
         if not match:
             log(f"{player} tried to join a non-existant mp lobby?")
@@ -1612,7 +1562,9 @@ class MatchChangeSettings(BasePacket):
         elif player.match.map_id == -1:
             if player.match.prev_map_id != self.match_data.map_id:
                 # new map has been chosen, send to match chat.
-                map_url = f"https://osu.{app.settings.DOMAIN}/beatmapsets/#/{self.match_data.map_id}"
+                map_url = (
+                    f"https://osu.{app.settings.DOMAIN}/b/{self.match_data.map_id}"
+                )
                 map_embed = f"[{map_url} {self.match_data.map_name}]"
                 player.match.chat.send_bot(f"Selecionado: {map_embed}.")
 
@@ -1624,12 +1576,12 @@ class MatchChangeSettings(BasePacket):
                 player.match.map_id = bmap.id
                 player.match.map_md5 = bmap.md5
                 player.match.map_name = bmap.full_name
-                player.match.mode = player.match.host.status.mode.as_vanilla
+                player.match.mode = GameMode(player.match.host.status.mode.as_vanilla)
             else:
                 player.match.map_id = self.match_data.map_id
                 player.match.map_md5 = self.match_data.map_md5
                 player.match.map_name = self.match_data.map_name
-                player.match.mode = self.match_data.mode
+                player.match.mode = GameMode(self.match_data.mode)
 
         if player.match.team_type != self.match_data.team_type:
             # if theres currently a scrim going on, only allow
@@ -1747,6 +1699,7 @@ class MatchComplete(BasePacket):
         ]
 
         player.match.unready_players(expected=SlotStatus.complete)
+        player.match.reset_players_loaded_status()
 
         player.match.in_progress = False
         player.match.enqueue(
@@ -1897,7 +1850,7 @@ class ChannelJoin(BasePacket):
         if self.name in IGNORED_CHANNELS:
             return
 
-        channel = app.state.sessions.channels[self.name]
+        channel = app.state.sessions.channels.get_by_name(self.name)
 
         if not channel or not player.join_channel(channel):
             log(f"{player} failed to join {self.name}.", Ansi.LYELLOW)
@@ -2065,7 +2018,7 @@ class ChannelPart(BasePacket):
         if self.name in IGNORED_CHANNELS:
             return
 
-        channel = app.state.sessions.channels[self.name]
+        channel = app.state.sessions.channels.get_by_name(self.name)
 
         if not channel:
             log(f"{player} failed to leave {self.name}.", Ansi.LYELLOW)
